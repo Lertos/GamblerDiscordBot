@@ -1,5 +1,6 @@
 import os
 import discord
+import bank
 from random import randrange, choice
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -8,6 +9,7 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
 bot = commands.Bot(command_prefix='!')
+botBank = bank.Bank()
 
 #Setup variables
 flipPayoutRate = 2
@@ -20,6 +22,7 @@ blackjackPayoutRate = 2
 @bot.event
 async def on_ready():
     print(f'{bot.user} has connected to Discord!')
+    print(botBank.balances)
     #members = '\n - '.join([member.name for member in bot.guilds[0].members])
 
 
@@ -88,9 +91,9 @@ async def roll_dice(ctx, guess : int, amount : int):
 
     #Send the user the message of the payout and whether they won
     if userWon == -1:
-        await ctx.channel.send('Rolled: [' + roll + ']. You guessed ' + str(guess) + ' and LOST... ' + str(payout) + ' has been removed from your balance')
+        await ctx.channel.send('Rolled: [' + str(roll) + ']. You guessed ' + str(guess) + ' and LOST... ' + str(payout) + ' has been removed from your balance')
     else:
-        await ctx.channel.send('Rolled: [' + roll + ']. You guessed ' + str(guess) + ' and WON! ' + str(payout) + ' has been added to your balance')
+        await ctx.channel.send('Rolled: [' + str(roll) + ']. You guessed ' + str(guess) + ' and WON! ' + str(payout) + ' has been added to your balance')
 
 
 #===============================================
