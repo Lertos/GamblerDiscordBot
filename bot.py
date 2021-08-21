@@ -12,9 +12,9 @@ bot = commands.Bot(command_prefix='!')
 botBank = bank.Bank()
 
 #Setup variables
-flipPayoutRate = 2
+flipPayoutRate = 1
 rollPayoutRate = 6
-blackjackPayoutRate = 2
+blackjackPayoutRate = 1
 
 #===============================================
 #   ON READY
@@ -27,73 +27,111 @@ async def on_ready():
 
 
 #===============================================
+#   Check to make sure the user has a balance
+#   If not, add them to the bank
+#===============================================
+def createUserBalanceIfNeeded(userId):
+    if str(userId) not in botBank.balances:
+        botBank.createNewBalance(userId)
+
+
+#===============================================
+#   Validation checks for any type of betting
+#===============================================
+def validation(userId, amount):
+    resultMsg = ''
+
+    #Create new balance if user doesn't exist yet
+    createUserBalanceIfNeeded(userId)
+
+    #Check to make sure the amount is positive
+    if amount <= 0:
+        resultMsg = 'The betting amount must be over 0$'
+
+    #Check to make sure the user has enough money
+    elif botBank.balances[str(userId)] < amount:
+        resultMsg = 'You do not have enough money to bet that high'
+
+    return resultMsg
+
+
+#===============================================
+#   Gets the payout based on if the guess was correct
+#===============================================
+def getPayoutResult(userId, amount, multiplier, result, guess):
+    #Calculate the payout to the user
+    if result == guess:
+        payout = amount * multiplier
+    else:
+        payout = -amount
+    
+
+    #Add the payout to the users balance
+    botBank.updateBalance(userId, payout)
+
+    return payout
+
+
+#===============================================
 #   FLIP
 #===============================================
 @bot.command(name='flip', help='[h/t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)') 
-async def user_msg(ctx, guess : str, amount : int):
+async def flipCoin(ctx, guess : str, amount : int):
     #Check to make sure the player supplied either a 'h' or a 't'
     if guess != 'h' and guess != 't':
         await ctx.channel.send('You must supply either ''h'' (heads) or ''t'' (tails)')
         return
 
-    #Check to make sure the user has enough money
-    #TODO
+    userId = ctx.author.id
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, amount)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
 
     #Flip the coin and store the result
-    side = choice(['h', 't'])
+    result = choice(['h', 't'])
 
-    #Check if the player won the coin flip
-    userWon = -1
-
-    if side == guess:
-        userWon = 1
-    
-    #Calculate the payout to the user
-    payout = amount * flipPayoutRate * userWon
-
-    #Add the payout to the users balance
-    #TODO
+    payout = getPayoutResult(userId, amount, flipPayoutRate, result, guess)
 
     #Send the user the message of the payout and whether they won
-    if userWon == -1:
-        await ctx.channel.send('You LOST... ' + str(payout) + ' has been removed from your balance')
+    if payout < 0:
+        await ctx.channel.send('You LOST... ' + str(abs(payout)) + ' has been removed from your balance')
     else:
-        await ctx.channel.send('You WON! ' + str(payout) + ' has been added to your balance')
+        await ctx.channel.send('You WON! ' + str(abs(payout)) + ' has been added to your balance')
 
 
 #===============================================
 #   ROLL
 #===============================================
 @bot.command(name='roll', help='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)') 
-async def roll_dice(ctx, guess : int, amount : int):
+async def rollDice(ctx, guess : int, amount : int):
     #Check to make sure the player supplied either a valid die side
     if guess < 1 or guess > 6:
         await ctx.channel.send('You must supply a number between 1-6')
         return
 
-    #Check to make sure the user has enough money
-    #TODO
+    userId = ctx.author.id
 
-    #Roll the die and store the result
-    roll = randrange(1, 7)
+    #Checks for any errors of the input
+    resultMsg = validation(userId, amount)
 
-    #Check if the player won the roll
-    userWon = -1
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
 
-    if roll == guess:
-        userWon = 1
-    
-    #Calculate the payout to the user
-    payout = amount * rollPayoutRate * userWon
+    #Roll the dice and store the result
+    result = randrange(1, 7)
 
-    #Add the payout to the users balance
-    #TODO
+    payout = getPayoutResult(userId, amount, rollPayoutRate, result, guess)
 
     #Send the user the message of the payout and whether they won
-    if userWon == -1:
-        await ctx.channel.send('Rolled: [' + str(roll) + ']. You guessed ' + str(guess) + ' and LOST... ' + str(payout) + ' has been removed from your balance')
+    if payout < 0:
+        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and LOST... ' + str(abs(payout)) + ' has been removed from your balance')
     else:
-        await ctx.channel.send('Rolled: [' + str(roll) + ']. You guessed ' + str(guess) + ' and WON! ' + str(payout) + ' has been added to your balance')
+        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and WON! ' + str(abs(payout)) + ' has been added to your balance')
 
 
 #===============================================
@@ -107,13 +145,16 @@ async def roll_dice(ctx, guess : int, amount : int):
 
 
 #===============================================
-#   ROLL
+#   BALANCE
 #===============================================
+@bot.command(name='balance', help='Checks your balance or sets it up for you') 
+async def checkBalance(ctx):
+    userId = ctx.author.id
 
+    #Create new balance if user doesn't exist yet
+    createUserBalanceIfNeeded(userId)
 
-#===============================================
-#   ROLL
-#===============================================
+    await ctx.channel.send('Your balance is: ' + str(botBank.balances[str(userId)]))
 
 
 #Start the bot
