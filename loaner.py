@@ -9,6 +9,7 @@ class Loaner:
     def __init__(self):
         self.loans = {}
 
+
     #Returns the loan amount if available - if not returns a negative value
     def askForLoan(self, userId):
         #If the user exists in the file check the cooldown

@@ -81,7 +81,7 @@ def getPayoutResult(userId, amount, multiplier, result, guess):
 #===============================================
 #   FLIP
 #===============================================
-@bot.command(name='flip', help='[h/t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)') 
+@bot.command(name='flip', aliases=["f"], help='[h/t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)') 
 async def flipCoin(ctx, guess : str, amount : int):
     #Check to make sure the player supplied either a 'h' or a 't'
     if guess != 'h' and guess != 't':
@@ -112,7 +112,7 @@ async def flipCoin(ctx, guess : str, amount : int):
 #===============================================
 #   ROLL
 #===============================================
-@bot.command(name='roll', help='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)') 
+@bot.command(name='roll', aliases=["ro"], help='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)') 
 async def rollDice(ctx, guess : int, amount : int):
     #Check to make sure the player supplied either a valid die side
     if guess < 1 or guess > 6:
@@ -148,7 +148,7 @@ async def rollDice(ctx, guess : int, amount : int):
 #===============================================
 #   LOAN
 #===============================================
-@bot.command(name='loan', help=f'The bank will loan you every {loaner.secondsToWait} seconds') 
+@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds') 
 async def getLoan(ctx):
     userId = ctx.author.id
 
@@ -166,7 +166,7 @@ async def getLoan(ctx):
 #===============================================
 #   BALANCE
 #===============================================
-@bot.command(name='balance', help='Checks your balance or sets it up for you') 
+@bot.command(name='balance', aliases=["bal"], help='Checks your balance or sets it up for you') 
 async def checkBalance(ctx):
     userId = ctx.author.id
 
@@ -179,7 +179,7 @@ async def checkBalance(ctx):
 #===============================================
 #   LEADERBOARD
 #===============================================
-@bot.command(name='leaderboard', help='Ranks users based on their balance') 
+@bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance') 
 async def leaderboard(ctx):
     userId = ctx.author.id
 
