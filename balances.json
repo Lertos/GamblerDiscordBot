@@ -1,1 +1,1 @@
-{"150018391220944897": 1001, "111930430445391872": 100, "111293109672869888": 0, "110506695234424832": 1}
+{"150018391220944897": {"balance": 100, "totalWon": 0, "totalLost": 0, "loans": 0, "flipWins": 0, "flipLosses": 0, "rollWins": 0, "rollLosses": 0, "fiftyWins": 0, "fiftyLosses": 0}, "<coroutine object getIdFromDisplayName at 0x000001716552AB40>": {"balance": 100, "totalWon": 0, "totalLost": 0, "loans": 0, "flipWins": 0, "flipLosses": 0, "rollWins": 0, "rollLosses": 0, "fiftyWins": 0, "fiftyLosses": 0}}

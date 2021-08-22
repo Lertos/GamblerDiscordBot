@@ -38,11 +38,16 @@ async def on_ready():
 #===============================================
 @bot.event
 async def on_command_error(ctx, exception):
+    #Checks for any errors in the command syntax
     if isinstance(exception, commands.MissingRequiredArgument) or isinstance(exception, commands.UserInputError):
         cmds = ctx.command.aliases
         cmds.append(ctx.command.name)
 
         await ctx.channel.send('**The proper command usage is:**  ![' + ' | '.join(cmds) + '] ' + ctx.command.help)
+
+    #Checks to make sure the required permissions are had
+    if isinstance(exception, commands.CheckFailure):
+        await ctx.channel.send('You do not have the required role to execute that command')
 
 
 #===============================================
@@ -68,7 +73,7 @@ def validation(userId, amount):
         resultMsg = 'The betting amount must be over 0$'
 
     #Check to make sure the user has enough money
-    elif botBank.balances[str(userId)] < amount:
+    elif botBank.balances[str(userId)]['balance'] < amount:
         resultMsg = 'You do not have enough money to bet that high'
 
     return resultMsg
@@ -89,6 +94,17 @@ def getPayoutResult(userId, amount, multiplier, result, guess):
     botBank.updateBalance(userId, payout)
 
     return payout
+
+
+#===============================================
+#   Returns the users unique ID based on given display name or -1 if not found
+#===============================================
+async def getIdFromDisplayName(ctx, displayName):
+    async for member in ctx.guild.fetch_members(limit=None):
+        if displayName.lower() == member.display_name.lower():
+            return member.id
+    
+    return -1
 
 
 #===============================================
@@ -117,15 +133,17 @@ async def flipCoin(ctx, guess : str, amount : int):
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
+        botBank.updatePlayerStats(userId, 'flip', -1)
         await ctx.channel.send('You LOST... ' + str(helper.moneyFormat(abs(payout))) + ' has been removed from your balance')
     else:
+        botBank.updatePlayerStats(userId, 'flip', 1)
         await ctx.channel.send('You WON! ' + str(helper.moneyFormat(abs(payout))) + ' has been added to your balance')
 
 
 #===============================================
 #   ROLL
 #===============================================
-@bot.command(name='roll', aliases=["ro"], help='[1-6] [bet amount]', brief='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)', ignore_extra=True, case_insensitive=True) 
+@bot.command(name='roll', aliases=["ro"], help='[1 - 6] [bet amount]', brief='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)', ignore_extra=True, case_insensitive=True) 
 async def rollDice(ctx, guess : int, amount : int):
     #Check to make sure the player supplied either a valid die side
     if guess < 1 or guess > 6:
@@ -148,10 +166,16 @@ async def rollDice(ctx, guess : int, amount : int):
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
+        botBank.updatePlayerStats(userId, 'roll', -1)
         await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and LOST... ' + str(helper.moneyFormat(abs(payout))) + ' has been removed from your balance')
     else:
+        botBank.updatePlayerStats(userId, 'roll', 1)
         await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and WON! ' + str(helper.moneyFormat(abs(payout))) + ' has been added to your balance')
 
+
+#===============================================
+#   50/50 - Duel Against Another
+#===============================================
 
 #===============================================
 #   21
@@ -179,14 +203,26 @@ async def getLoan(ctx):
 #===============================================
 #   BALANCE
 #===============================================
-@bot.command(name='balance', aliases=["bal"], help='Checks your balance or sets it up for you', ignore_extra=True, case_insensitive=True) 
-async def checkBalance(ctx):
+@bot.command(name='balance', aliases=["bal"], help='(opt: displayName) Shows the balance of yourself or another', ignore_extra=True, case_insensitive=True) 
+async def checkBalance(ctx, displayName = ''):
     userId = ctx.author.id
+    outputText = 'Your balance is: '
+
+    if displayName != '':
+        userId = await getIdFromDisplayName(ctx, displayName)
+
+        if userId == -1:
+            await ctx.channel.send('No one in the discord has a display name that matches what you supplied')
+            return
+
+        outputText = 'Their balance is: '
 
     #Create new balance if user doesn't exist yet
     createUserBalanceIfNeeded(userId)
 
-    await ctx.channel.send('Your balance is: ' + str(helper.moneyFormat(botBank.balances[str(userId)])))
+    balance = helper.moneyFormat(botBank.balances[str(userId)]['balance'])
+
+    await ctx.channel.send(outputText + str(balance))
 
 
 #===============================================
@@ -216,15 +252,39 @@ async def ranking(ctx):
 #===============================================
 
 #===============================================
-#   LEADERBOARD
+#   ADMIN
 #===============================================
-@bot.command(name='admin', aliases=['ad','adm'], help='Responds if you are an admin', brief='[h/t] [bet]', ignore_extra=True) 
-async def checkAdmin(ctx, lol:str):
+@bot.command(name='admin', help='Shows admin commands', ignore_extra=True) 
+@commands.has_permissions(administrator=True)
+async def checkAdmin(ctx):
+    adminCommands = ['modify']
+    output = '===== ADMIN COMMANDS =====\n'
 
-    #Check if the user is an admin
-    ctx.author.permissions_in(ctx.channel).administrator
+    for i in adminCommands:
+        cmd = bot.get_command(i)
+        output += '• ' + cmd.name + ' - ' + cmd.help + '\n'
 
-    await ctx.channel.send('You are an admin')
+    await ctx.author.send(output)
+
+
+#===============================================
+#   MOD
+#===============================================
+@bot.command(name='mod', hidden=True, help='[displayName] [amount] [hide] - Modifies a players balance') 
+@commands.has_permissions(administrator=True)
+async def modifyBalance(ctx, displayName : str, amount : int, hide = 0):
+    if hide not in [0,1]:
+        await ctx.author.send('Unless [hide] is 1 (to hide the output) it is not needed')
+    
+    userId = await getIdFromDisplayName(ctx, displayName)
+    
+    if userId == -1:
+        await ctx.author.send('No one in the discord has a display name that matches what you supplied to the add command')
+    else:
+        botBank.updateBalance(userId, amount)
+
+        if hide == 0:
+            await ctx.channel.send(displayName + ' has been given ' + str(amount) + ' by the bank! How lucky!')
 
 
 #Start the bot
