@@ -34,6 +34,18 @@ async def on_ready():
 
 
 #===============================================
+#   ON_COMMAND_ERROR 
+#===============================================
+@bot.event
+async def on_command_error(ctx, exception):
+    if isinstance(exception, commands.MissingRequiredArgument) or isinstance(exception, commands.UserInputError):
+        cmds = ctx.command.aliases
+        cmds.append(ctx.command.name)
+
+        await ctx.channel.send('**The proper command usage is:**  ![' + ' | '.join(cmds) + '] ' + ctx.command.help)
+
+
+#===============================================
 #   Check to make sure the user has a balance
 #   If not, add them to the bank
 #===============================================
@@ -82,7 +94,7 @@ def getPayoutResult(userId, amount, multiplier, result, guess):
 #===============================================
 #   FLIP
 #===============================================
-@bot.command(name='flip', aliases=["f"], help='[h/t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)') 
+@bot.command(name='flip', aliases=["f"], help='[h | t] [bet amount]', brief='[h | t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)',  ignore_extra=True, case_insensitive=True) 
 async def flipCoin(ctx, guess : str, amount : int):
     #Check to make sure the player supplied either a 'h' or a 't'
     if guess != 'h' and guess != 't':
@@ -113,7 +125,7 @@ async def flipCoin(ctx, guess : str, amount : int):
 #===============================================
 #   ROLL
 #===============================================
-@bot.command(name='roll', aliases=["ro"], help='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)') 
+@bot.command(name='roll', aliases=["ro"], help='[1-6] [bet amount]', brief='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)', ignore_extra=True, case_insensitive=True) 
 async def rollDice(ctx, guess : int, amount : int):
     #Check to make sure the player supplied either a valid die side
     if guess < 1 or guess > 6:
@@ -149,7 +161,7 @@ async def rollDice(ctx, guess : int, amount : int):
 #===============================================
 #   LOAN
 #===============================================
-@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds') 
+@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=True) 
 async def getLoan(ctx):
     userId = ctx.author.id
 
@@ -167,7 +179,7 @@ async def getLoan(ctx):
 #===============================================
 #   BALANCE
 #===============================================
-@bot.command(name='balance', aliases=["bal"], help='Checks your balance or sets it up for you') 
+@bot.command(name='balance', aliases=["bal"], help='Checks your balance or sets it up for you', ignore_extra=True, case_insensitive=True) 
 async def checkBalance(ctx):
     userId = ctx.author.id
 
@@ -180,9 +192,11 @@ async def checkBalance(ctx):
 #===============================================
 #   LEADERBOARD
 #===============================================
-@bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance') 
-async def leaderboard(ctx):
+@bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance', ignore_extra=True, case_insensitive=True) 
+async def ranking(ctx):
     userId = ctx.author.id
+
+    print(ctx.author.permissions_in(ctx.channel).administrator)
 
     #Get the latest member list
     members = []
@@ -193,6 +207,24 @@ async def leaderboard(ctx):
     message = botBank.getLeaderboard(userId, members)
 
     await ctx.channel.send(message)
+
+
+#===============================================
+#
+#   ADMIN COMMANDS
+#
+#===============================================
+
+#===============================================
+#   LEADERBOARD
+#===============================================
+@bot.command(name='admin', aliases=['ad','adm'], help='Responds if you are an admin', brief='[h/t] [bet]', ignore_extra=True) 
+async def checkAdmin(ctx, lol:str):
+
+    #Check if the user is an admin
+    ctx.author.permissions_in(ctx.channel).administrator
+
+    await ctx.channel.send('You are an admin')
 
 
 #Start the bot
