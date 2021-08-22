@@ -1,6 +1,7 @@
 import os
 import discord
 import bank
+import helper
 from discord.flags import Intents
 import loaner
 from random import randrange, choice
@@ -104,9 +105,9 @@ async def flipCoin(ctx, guess : str, amount : int):
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
-        await ctx.channel.send('You LOST... ' + str(abs(payout)) + ' has been removed from your balance')
+        await ctx.channel.send('You LOST... ' + str(helper.moneyFormat(abs(payout))) + ' has been removed from your balance')
     else:
-        await ctx.channel.send('You WON! ' + str(abs(payout)) + ' has been added to your balance')
+        await ctx.channel.send('You WON! ' + str(helper.moneyFormat(abs(payout))) + ' has been added to your balance')
 
 
 #===============================================
@@ -135,9 +136,9 @@ async def rollDice(ctx, guess : int, amount : int):
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
-        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and LOST... ' + str(abs(payout)) + ' has been removed from your balance')
+        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and LOST... ' + str(helper.moneyFormat(abs(payout))) + ' has been removed from your balance')
     else:
-        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and WON! ' + str(abs(payout)) + ' has been added to your balance')
+        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and WON! ' + str(helper.moneyFormat(abs(payout))) + ' has been added to your balance')
 
 
 #===============================================
@@ -160,7 +161,7 @@ async def getLoan(ctx):
         await ctx.channel.send(timeLeft)
     else:
         botBank.updateBalance(userId, loanAmount)
-        await ctx.channel.send('You have been loaned: ' + str(loanAmount))
+        await ctx.channel.send('You have been loaned: ' + str(helper.moneyFormat(loanAmount)))
 
 
 #===============================================
@@ -173,7 +174,7 @@ async def checkBalance(ctx):
     #Create new balance if user doesn't exist yet
     createUserBalanceIfNeeded(userId)
 
-    await ctx.channel.send('Your balance is: ' + str(botBank.balances[str(userId)]))
+    await ctx.channel.send('Your balance is: ' + str(helper.moneyFormat(botBank.balances[str(userId)])))
 
 
 #===============================================

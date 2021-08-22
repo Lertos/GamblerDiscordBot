@@ -1,4 +1,5 @@
 import json
+import helper
 from os import stat_result
 
 balanceFile = 'balances.json'
@@ -42,7 +43,7 @@ class Bank:
         balances = self.balances     
         sortedBalances = sorted(balances.items(), key=lambda x: x[1], reverse=True)
 
-        output = list(map(lambda x: str(x[1]) + ' - ' + self.getDisplayName(userId, members, x[0]), sortedBalances))
+        output = list(map(lambda x: str(helper.moneyFormat(x[1])) + ' - ' + self.getDisplayName(userId, members, x[0]), sortedBalances))
 
         return '\n'.join(output)
 
