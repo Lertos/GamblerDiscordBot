@@ -1,6 +1,8 @@
 import os
 import discord
 import bank
+from discord.flags import Intents
+import loaner
 from random import randrange, choice
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -8,8 +10,14 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-bot = commands.Bot(command_prefix='!')
+#Enable intents so the member list can be accessed
+intents = discord.Intents.default()
+intents.members = True
+
+bot = commands.Bot(command_prefix='!', intents=intents)
+
 botBank = bank.Bank()
+botLoaner = loaner.Loaner()
 
 #Setup variables
 flipPayoutRate = 1
@@ -21,9 +29,7 @@ blackjackPayoutRate = 1
 #===============================================
 @bot.event
 async def on_ready():
-    print(f'{bot.user} has connected to Discord!')
-    print(botBank.balances)
-    #members = '\n - '.join([member.name for member in bot.guilds[0].members])
+    print(f'---------  {bot.user} has started   ---------')
 
 
 #===============================================
@@ -135,13 +141,26 @@ async def rollDice(ctx, guess : int, amount : int):
 
 
 #===============================================
-#   ROLL
+#   21
 #===============================================
 
 
 #===============================================
-#   ROLL
+#   LOAN
 #===============================================
+@bot.command(name='loan', help=f'The bank will loan you every {loaner.secondsToWait} seconds') 
+async def getLoan(ctx):
+    userId = ctx.author.id
+
+    #Get the loan amount the bank offers - if no loan is allowed, it will be negative
+    loanAmount = botLoaner.askForLoan(userId)
+
+    if loanAmount < 0:
+        timeLeft = botLoaner.checkTimeLeft(userId)
+        await ctx.channel.send(timeLeft)
+    else:
+        botBank.updateBalance(userId, loanAmount)
+        await ctx.channel.send('You have been loaned: ' + str(loanAmount))
 
 
 #===============================================
@@ -155,6 +174,24 @@ async def checkBalance(ctx):
     createUserBalanceIfNeeded(userId)
 
     await ctx.channel.send('Your balance is: ' + str(botBank.balances[str(userId)]))
+
+
+#===============================================
+#   LEADERBOARD
+#===============================================
+@bot.command(name='leaderboard', help='Ranks users based on their balance') 
+async def leaderboard(ctx):
+    userId = ctx.author.id
+
+    #Get the latest member list
+    members = []
+    async for member in ctx.guild.fetch_members(limit=None):
+        members.append((member.id,member.display_name))
+    
+    #Create the leaderboard string
+    message = botBank.getLeaderboard(userId, members)
+
+    await ctx.channel.send(message)
 
 
 #Start the bot

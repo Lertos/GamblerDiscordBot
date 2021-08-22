@@ -1,7 +1,9 @@
 import json
+from os import stat_result
 
 balanceFile = 'balances.json'
 startAmount = 100
+
 
 class Bank:
     
@@ -31,4 +33,21 @@ class Bank:
         if str(userId) not in self.balances:
             self.balances[str(userId)] = startAmount
             self.saveBalances()
-            print(self.balances)
+
+    #Calculates the leaderboard
+    def getLeaderboard(self, userId, members):
+        balances = self.balances     
+        sortedBalances = sorted(balances.items(), key=lambda x: x[1], reverse=True)
+
+        output = list(map(lambda x: str(x[1]) + ' \t ' + self.getDisplayName(userId, members, x[0]), sortedBalances))
+
+        return '\n'.join(output)
+
+    #Find the users id in the members list and returns the display name 
+    def getDisplayName(self, userId, members, id):
+        for x,y in members:
+            if str(x) == str(id):
+                if str(userId) == str(id):
+                    return '**' + str(y) + '**'
+                else:
+                    return y
