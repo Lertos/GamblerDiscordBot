@@ -2,6 +2,7 @@ import os
 import discord
 import bank
 import helper
+import fifty
 from discord.flags import Intents
 import loaner
 from random import randrange, choice
@@ -15,10 +16,11 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents, case_insensitive=True)
 
 botBank = bank.Bank()
 botLoaner = loaner.Loaner()
+botFifty = fifty.FiftyFifty()
 
 #Setup variables
 flipPayoutRate = 1
@@ -110,7 +112,7 @@ async def getIdFromDisplayName(ctx, displayName):
 #===============================================
 #   FLIP
 #===============================================
-@bot.command(name='flip', aliases=["f"], help='[h | t] [bet amount]', brief='[h | t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)',  ignore_extra=True, case_insensitive=True) 
+@bot.command(name='flip', aliases=["f"], help='[h | t] [bet amount]', brief='[h | t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)',  ignore_extra=True) 
 async def flipCoin(ctx, guess : str, amount : int):
     #Check to make sure the player supplied either a 'h' or a 't'
     if guess != 'h' and guess != 't':
@@ -143,7 +145,7 @@ async def flipCoin(ctx, guess : str, amount : int):
 #===============================================
 #   ROLL
 #===============================================
-@bot.command(name='roll', aliases=["ro"], help='[1 - 6] [bet amount]', brief='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)', ignore_extra=True, case_insensitive=True) 
+@bot.command(name='roll', aliases=["ro"], help='[1 - 6] [bet amount]', brief='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)', ignore_extra=True) 
 async def rollDice(ctx, guess : int, amount : int):
     #Check to make sure the player supplied either a valid die side
     if guess < 1 or guess > 6:
@@ -174,8 +176,51 @@ async def rollDice(ctx, guess : int, amount : int):
 
 
 #===============================================
-#   50/50 - Duel Against Another
+#   50start - Creates a new 50/50 posting
 #===============================================
+@bot.command(name='50start', aliases=["fs"], help='[bet amount]', brief='[bet amount] - Creates a new 50/50 posting',  ignore_extra=True) 
+async def fiftyStart(ctx, amount : int):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, amount)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
+
+    #Check if there is already a posting for this user
+    hasPosting = botFifty.doesUserHavePosting(userId)
+    if hasPosting:
+        await ctx.channel.send(name + ', you already have a posting. Do "!50cancel" to cancel it.')
+        return
+
+    success = botFifty.createPosting(userId, name, amount)
+    if success == False:
+        await ctx.channel.send(name + ', you already have a posting. Do "!50cancel" to cancel it.')
+        return
+
+    await ctx.channel.send(name + ', you have created a 50/50 posting for ' + str(helper.moneyFormat(amount)) + '$')
+
+
+#===============================================
+#   50check - Checks all 50/50 postings available
+#===============================================
+@bot.command(name='50check', aliases=["fc"], help='Shows all available 50/50 postings',  ignore_extra=True) 
+async def fiftyCheck(ctx):
+    await ctx.channel.send(botFifty.displayPostings())
+
+
+#===============================================
+#   50accept - Accepts a 50/50 posting
+#===============================================
+
+
+#===============================================
+#   50cancel - Cancels your own 50/50 posting
+#===============================================
+
 
 #===============================================
 #   21
@@ -204,7 +249,7 @@ async def getLoan(ctx):
 #===============================================
 #   BALANCE
 #===============================================
-@bot.command(name='balance', aliases=["bal"], help='(optional: name) Shows the balance of yourself or another', ignore_extra=True, case_insensitive=True) 
+@bot.command(name='balance', aliases=["bal"], help='(optional: name) Shows the balance of yourself or another', ignore_extra=True) 
 async def checkBalance(ctx, name = ''):
     userId = ctx.author.id
     outputText = 'Your balance is: '
@@ -229,7 +274,7 @@ async def checkBalance(ctx, name = ''):
 #===============================================
 #   STATS
 #===============================================
-@bot.command(name='stats', aliases=["st"], help='(optional: name) Shows the stats of yourself or another', ignore_extra=True, case_insensitive=True) 
+@bot.command(name='stats', aliases=["st"], help='(optional: name) Shows the stats of yourself or another', ignore_extra=True) 
 async def checkStats(ctx, name = ''):
     userId = ctx.author.id
     displayName = name.capitalize()
@@ -250,7 +295,7 @@ async def checkStats(ctx, name = ''):
 #===============================================
 #   LEADERBOARD
 #===============================================
-@bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance', ignore_extra=True, case_insensitive=True) 
+@bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance', ignore_extra=True) 
 async def ranking(ctx):
     userId = ctx.author.id
 

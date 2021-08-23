@@ -28,6 +28,12 @@ class Bank:
             return json.load(f)
 
 
+    #Saves the json file with the updated balances
+    def saveBalances(self):
+        with open(balanceFile,'w') as f:
+            f.write(json.dumps(self.balances))
+
+
     #Updates the balance of a user and updates stats
     def updateBalance(self, userId, amount):
         id = str(userId)
@@ -86,12 +92,6 @@ class Bank:
             self.balances[id]['loans'] = self.balances[id]['loans'] + 1
 
         self.saveBalances()
-
-
-    #Saves the json file with the updates balances
-    def saveBalances(self):
-        with open(balanceFile,'w') as f:
-            f.write(json.dumps(self.balances))
 
 
     #If the user is new add them with the default starting amount
