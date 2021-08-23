@@ -110,6 +110,40 @@ async def getIdFromDisplayName(ctx, displayName):
 
 
 #===============================================
+#   Returns the user object based on given user id
+#===============================================
+async def getUserFromId(ctx, userId):
+    id = int(userId)
+
+    async for member in ctx.guild.fetch_members(limit=None):
+        if id == member.id:
+            return member
+    return -1
+
+
+#===============================================
+#   Processes the fifty game mode outcome
+#===============================================
+async def processFiftyFifty(ctx, userId, name, opponentName, result, amount, mention = False):
+    payout = amount * result
+    outcome = 'WON'
+
+    if result == -1:
+        outcome = 'LOST'
+
+    botBank.updatePlayerStats(userId, 'fifty', result)
+    botBank.updateBalance(userId, payout)
+
+    #Send the results to the poster as they may not be online
+    if mention:
+        userObj = await getUserFromId(ctx, userId)
+        await ctx.channel.send(userObj.mention + ' You have **' + outcome + '** against **' + opponentName.capitalize() + '**   (**BET: ' + str(helper.moneyFormat(abs(amount))) + '**)')
+    #Post the results for everyone to see in the channel
+    #else:
+    #    await ctx.channel.send('**' + name + '**' + ' has **' + outcome + '** against **' + opponentName.capitalize() + '**   (**BET: ' + str(helper.moneyFormat(abs(amount))) + '**)')
+
+
+#===============================================
 #   FLIP
 #===============================================
 @bot.command(name='flip', aliases=["f"], help='[h | t] [bet amount]', brief='[h | t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)',  ignore_extra=True) 
@@ -178,10 +212,10 @@ async def rollDice(ctx, guess : int, amount : int):
 
 
 #===============================================
-#   50start - Creates a new 50/50 posting
+#   50create - Creates a new 50/50 posting
 #===============================================
-@bot.command(name='50start', aliases=["fs"], help='[bet amount]', brief='[bet amount] - Creates a new 50/50 posting',  ignore_extra=True) 
-async def fiftyStart(ctx, amount : int):
+@bot.command(name='50create', aliases=['fc'], help='[bet amount]', brief='[bet amount] - Creates a new 50/50 posting',  ignore_extra=True) 
+async def fiftyCreate(ctx, amount : int):
     userId = ctx.author.id
     name = str(ctx.author.display_name)
 
@@ -195,33 +229,90 @@ async def fiftyStart(ctx, amount : int):
     #Check if there is already a posting for this user
     hasPosting = botFifty.doesUserHavePosting(userId)
     if hasPosting:
-        await ctx.channel.send(name + ', you already have a posting. Do "!50cancel" to cancel it.')
+        await ctx.channel.send(name + ', you already have a posting. Do "!50remove" to cancel it.')
         return
 
+    #Try to create the posting
     success = botFifty.createPosting(userId, name, amount)
     if success == False:
-        await ctx.channel.send(name + ', you already have a posting. Do "!50cancel" to cancel it.')
+        await ctx.channel.send(name + ', you already have a posting. Do "!50remove" to cancel it.')
         return
 
-    await ctx.channel.send(name + ', you have created a 50/50 posting for ' + str(helper.moneyFormat(amount)) + '$')
+    #Take the money from the user
+    botBank.updateBalance(userId, -amount)
+
+    await ctx.channel.send(name + ', you have created a 50/50 posting for ' + str(helper.moneyFormat(amount)))
 
 
 #===============================================
-#   50check - Checks all 50/50 postings available
+#   50see - Checks all 50/50 postings available
 #===============================================
-@bot.command(name='50check', aliases=["fc"], help='Shows all available 50/50 postings',  ignore_extra=True) 
-async def fiftyCheck(ctx):
+@bot.command(name='50see', aliases=['fs'], help='Shows all available 50/50 postings',  ignore_extra=True) 
+async def fiftySee(ctx):
     await ctx.channel.send(botFifty.displayPostings())
 
 
 #===============================================
 #   50accept - Accepts a 50/50 posting
 #===============================================
+@bot.command(name='50accept', aliases=['fa'], help='[name]', brief='[name] - Accepts and starts a 50/50 game',  ignore_extra=True) 
+async def fiftyCreate(ctx, displayName : str):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    #Checks to make sure the given name actually has a posting
+    postingAmount = botFifty.getPostingAmountIfExists(displayName)
+    if postingAmount == -1:
+        await ctx.channel.send(name + ', there is no posting by the username you supplied')
+        return
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, postingAmount)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
+
+    #Flip a coin and store the result (0 = poster, 1 = challenger)
+    result = choice([0, 1])
+
+    #Get the user id of the poster
+    posterId = botFifty.getPostingUserIdIfExists(displayName)
+    if posterId == '':
+        await ctx.channel.send(name + ', there is no posting by the username you supplied')
+        return
+
+    #Remove the posting
+    botFifty.removePosting(posterId)
+
+    if result == 0: #Poster won
+        await processFiftyFifty(ctx, userId, name, displayName, -1, postingAmount)
+        await processFiftyFifty(ctx, posterId, displayName, name, 1, postingAmount, True)
+    else: #Challenger won
+        await processFiftyFifty(ctx, userId, name, displayName, 1, postingAmount)
+        await processFiftyFifty(ctx, posterId, displayName, name, -1, postingAmount, True)
 
 
 #===============================================
-#   50cancel - Cancels your own 50/50 posting
+#   50remove - Cancels your own 50/50 posting
 #===============================================
+@bot.command(name='50remove', aliases=['fr'], help='Removes your own 50/50 posting',  ignore_extra=True) 
+async def fiftyRemove(ctx):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    #Check if there is already a posting for this user
+    hasPosting = botFifty.doesUserHavePosting(userId)
+    if hasPosting:
+        #Remove the posting
+        botFifty.removePosting(userId)
+
+        #Give the money back to the user
+        botBank.updateBalance(userId, botFifty.getPostingAmountIfExists(name))
+
+        await ctx.channel.send(name + ', your 50/50 posting has been removed successfully.')
+    else:
+        await ctx.channel.send(name + ', you do not have a posting to remove')
 
 
 #===============================================

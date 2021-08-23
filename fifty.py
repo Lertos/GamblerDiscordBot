@@ -23,32 +23,54 @@ class FiftyFifty:
 
     #Returns a bool whether or not the user has a posting or not
     def doesUserHavePosting(self, userId):
-        if userId in self.postings.keys():
+        id = str(userId)
+
+        if id in self.postings.keys():
             return True
         return False
 
 
-    #Returns a bool whether or not the given name has a posting or not
-    def doesNameExistInPosting(self, name):
+    #Returns -1 if the posting doesnt exist or the amount in the posting if it does exist
+    def getPostingAmountIfExists(self, name):
         for key in self.postings.keys():
             if self.postings[key]['name'].lower() == name.lower():
-                return True
-        return False
+                return self.postings[key]['amount']
+        return -1
+
+
+    #Returns the user id of a posting based on the name
+    def getPostingUserIdIfExists(self, name):
+        for key in self.postings.keys():
+            if self.postings[key]['name'].lower() == name.lower():
+                return str(key)
+        return ''
 
 
     #Create posting with the given amount
     def createPosting(self, userId, name, amount):
-        if userId in self.postings.keys():
+        id = str(userId)
+
+        if id in self.postings.keys():
             return False
         
-        self.postings[userId] = {}
+        self.postings[id] = {}
 
-        self.postings[userId]['name'] = name
-        self.postings[userId]['amount'] = amount
+        self.postings[id]['name'] = name
+        self.postings[id]['amount'] = amount
 
         self.savePostings()
 
         return True
+
+
+    #Remove a posting based on given user id
+    def removePosting(self, userId):
+        id = str(userId)
+
+        if id in self.postings.keys():
+            self.postings.pop(id, None)
+
+        self.savePostings()
 
 
     #Returns a string with all the postings
