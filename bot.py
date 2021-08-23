@@ -114,12 +114,13 @@ async def getIdFromDisplayName(ctx, displayName):
 #===============================================
 @bot.command(name='flip', aliases=["f"], help='[h | t] [bet amount]', brief='[h | t] [bet amount] - Flips a coin (1/2 chance, 2 * payout)',  ignore_extra=True) 
 async def flipCoin(ctx, guess : str, amount : int):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
     #Check to make sure the player supplied either a 'h' or a 't'
     if guess != 'h' and guess != 't':
-        await ctx.channel.send('You must supply either ''h'' (heads) or ''t'' (tails)')
+        await ctx.channel.send(name + ', you must supply either ''h'' (heads) or ''t'' (tails)')
         return
-
-    userId = ctx.author.id
 
     #Checks for any errors of the input
     resultMsg = validation(userId, amount)
@@ -136,10 +137,10 @@ async def flipCoin(ctx, guess : str, amount : int):
     #Send the user the message of the payout and whether they won
     if payout < 0:
         botBank.updatePlayerStats(userId, 'flip', -1)
-        await ctx.channel.send('You LOST... ' + str(helper.moneyFormat(abs(payout))) + ' has been removed from your balance')
+        await ctx.channel.send(':regional_indicator_' + result + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updatePlayerStats(userId, 'flip', 1)
-        await ctx.channel.send('You WON! ' + str(helper.moneyFormat(abs(payout))) + ' has been added to your balance')
+        await ctx.channel.send(':regional_indicator_' + result + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
 
 
 #===============================================
@@ -153,6 +154,7 @@ async def rollDice(ctx, guess : int, amount : int):
         return
 
     userId = ctx.author.id
+    name = str(ctx.author.display_name)
 
     #Checks for any errors of the input
     resultMsg = validation(userId, amount)
@@ -169,10 +171,10 @@ async def rollDice(ctx, guess : int, amount : int):
     #Send the user the message of the payout and whether they won
     if payout < 0:
         botBank.updatePlayerStats(userId, 'roll', -1)
-        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and LOST... ' + str(helper.moneyFormat(abs(payout))) + ' has been removed from your balance')
+        await ctx.channel.send(helper.getRollNumberWord(result) + '  ' + name + ', you guessed ' + str(guess) + ' and **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updatePlayerStats(userId, 'roll', 1)
-        await ctx.channel.send('Rolled: [' + str(result) + ']. You guessed ' + str(guess) + ' and WON! ' + str(helper.moneyFormat(abs(payout))) + ' has been added to your balance')
+        await ctx.channel.send(helper.getRollNumberWord(result) + '  ' + name + ', you guessed ' + str(guess) + ' and **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
 
 
 #===============================================
@@ -233,6 +235,7 @@ async def fiftyCheck(ctx):
 @bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
 async def getLoan(ctx):
     userId = ctx.author.id
+    name = str(ctx.author.display_name)
 
     #Get the loan amount the bank offers - if no loan is allowed, it will be negative
     loanAmount = botLoaner.askForLoan(userId)
@@ -243,7 +246,7 @@ async def getLoan(ctx):
     else:
         botBank.updateBalance(userId, loanAmount)
         botBank.updateLoanStat(userId)
-        await ctx.channel.send('You have been loaned: ' + str(helper.moneyFormat(loanAmount)))
+        await ctx.channel.send(name + ', you have been loaned: ' + str(helper.moneyFormat(loanAmount)))
 
 
 #===============================================

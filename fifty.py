@@ -53,7 +53,7 @@ class FiftyFifty:
 
     #Returns a string with all the postings
     def displayPostings(self):
-        output = '===== 50/50 POSTINGS =====\n'
+        output = helper.listHeaders('50/50 POSTINGS')
 
         if len(self.postings) == 0:
             output = 'There are no postings at the moment'

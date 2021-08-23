@@ -109,16 +109,18 @@ class Bank:
 
     #Calculates the leaderboard
     def getLeaderboard(self, userId, members):
-        sortedBalances = sorted(self.balances.items(), key=lambda x: x[1]['balance'], reverse=True)
-        output = list(map(lambda x: str(helper.moneyFormat(x[1]['balance'])) + ' - ' + self.getDisplayName(userId, members, x[0]), sortedBalances))
+        header = helper.listHeaders('TOP BALANCES')
 
-        return '\n'.join(output)
+        sortedBalances = sorted(self.balances.items(), key=lambda x: x[1]['balance'], reverse=True)
+        formatted = list(map(lambda x: str(helper.moneyFormat(x[1]['balance'])) + ' - ' + self.getDisplayName(userId, members, x[0]), sortedBalances))
+
+        return header + '\n'.join(formatted)
 
 
     #Creates a string with all of the player stats in it
     def getPlayerStats(self, userId, name):
         id = str(userId)
-        output = '===== STATS FOR ' + name + ' =====\n'
+        output = helper.listHeaders('STATS FOR ' + name)
 
         if id not in self.balances:
             self.createNewBalance(userId)
