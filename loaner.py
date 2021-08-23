@@ -12,9 +12,11 @@ class Loaner:
 
     #Returns the loan amount if available - if not returns a negative value
     def askForLoan(self, userId):
+        id = str(userId)
+
         #If the user exists in the file check the cooldown
-        if str(userId) in self.loans:
-            loanReady = self.loans[str(userId)]
+        if id in self.loans:
+            loanReady = self.loans[id]
             difference = loanReady - round(time.time())
 
             #If the cooldown isn't met send back a negative value to show its not ready
@@ -22,19 +24,21 @@ class Loaner:
                 return -1
 
         #The loan is available so return the amount and set the cooldown
-        self.loans[str(userId)] = round(time.time()) + secondsToWait
+        self.loans[id] = round(time.time()) + secondsToWait
 
         return loanAmount
 
 
     #Returns the time in hours, minutes, seconds until a loan is available
     def checkTimeLeft(self, userId):
+        id = str(userId)
+
         #Check if the user is in the list
-        if str(userId) not in self.loans:
+        if id not in self.loans:
             return 'You do not have a cooldown and the loan is available'
 
         #Get the total time in seconds and parse it
-        loanReady = self.loans[str(userId)]
+        loanReady = self.loans[id]
         totalTime = loanReady - round(time.time())
 
         hours = math.floor(totalTime / 3600)

@@ -2,7 +2,19 @@ import json
 import helper
 
 balanceFile = 'balances.json'
-startAmount = 100
+
+statSetupInfo = {
+    'balance' : { 'display' : 'Current Balance', 'startAmount' : 100 },
+    'totalWon' : { 'display' : 'Total Money Won', 'startAmount' : 0 },
+    'totalLost' : { 'display' : 'Total Money Lost', 'startAmount' : 0 },
+    'loans' : { 'display' : 'Loans Given', 'startAmount' : 0 },
+    'flipWins' : { 'display' : 'Coin Flip Wins', 'startAmount' : 0 },
+    'flipLosses' : { 'display' : 'Coin Flip Losses', 'startAmount' : 0 },
+    'rollWins' : { 'display' : 'Dice Roll Wins', 'startAmount' : 0 },
+    'rollLosses' : { 'display' : 'Dice Roll Losses', 'startAmount' : 0 },
+    'fiftyWins' : { 'display' : '50/50 Wins', 'startAmount' : 0 },
+    'fiftyLosses' : { 'display' : '50/50 Losses', 'startAmount' : 0 }
+}
 
 
 class Bank:   
@@ -63,6 +75,19 @@ class Bank:
         self.saveBalances()
 
 
+    #Increment the loan stat of a player
+    def updateLoanStat(self, userId):
+        id = str(userId)
+
+        #Insert the stat key if it doesnt exist for the user 
+        if 'loans' not in self.balances[id].keys():
+            self.balances[id]['loans'] = 1
+        else:
+            self.balances[id]['loans'] = self.balances[id]['loans'] + 1
+
+        self.saveBalances()
+
+
     #Saves the json file with the updates balances
     def saveBalances(self):
         with open(balanceFile,'w') as f:
@@ -76,18 +101,8 @@ class Bank:
         if id not in self.balances:
             self.balances[id] = {}
 
-            self.balances[id]['balance'] = startAmount
-
-            self.balances[id]['totalWon'] = 0
-            self.balances[id]['totalLost'] = 0
-            self.balances[id]['loans'] = 0
-
-            self.balances[id]['flipWins'] = 0
-            self.balances[id]['flipLosses'] = 0
-            self.balances[id]['rollWins'] = 0
-            self.balances[id]['rollLosses'] = 0
-            self.balances[id]['fiftyWins'] = 0
-            self.balances[id]['fiftyLosses'] = 0
+            for key in statSetupInfo:
+                self.balances[id][key] = statSetupInfo[key]['startAmount']
 
             self.saveBalances()
 
@@ -99,6 +114,19 @@ class Bank:
 
         return '\n'.join(output)
 
+
+    #Creates a string with all of the player stats in it
+    def getPlayerStats(self, userId, name):
+        id = str(userId)
+        output = '===== STATS FOR ' + name + ' =====\n'
+
+        if id not in self.balances:
+            self.createNewBalance(userId)
+
+        for key in statSetupInfo.keys():
+            output += '• ' + statSetupInfo[key]['display'] + ': ' + str(self.balances[id][key]) + '\n'
+
+        return output
 
     #Find the users id in the members list and returns the display name 
     def getDisplayName(self, userId, members, id):

@@ -185,7 +185,7 @@ async def rollDice(ctx, guess : int, amount : int):
 #===============================================
 #   LOAN
 #===============================================
-@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=True) 
+@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
 async def getLoan(ctx):
     userId = ctx.author.id
 
@@ -197,19 +197,20 @@ async def getLoan(ctx):
         await ctx.channel.send(timeLeft)
     else:
         botBank.updateBalance(userId, loanAmount)
+        botBank.updateLoanStat(userId)
         await ctx.channel.send('You have been loaned: ' + str(helper.moneyFormat(loanAmount)))
 
 
 #===============================================
 #   BALANCE
 #===============================================
-@bot.command(name='balance', aliases=["bal"], help='(opt: displayName) Shows the balance of yourself or another', ignore_extra=True, case_insensitive=True) 
-async def checkBalance(ctx, displayName = ''):
+@bot.command(name='balance', aliases=["bal"], help='(optional: name) Shows the balance of yourself or another', ignore_extra=True, case_insensitive=True) 
+async def checkBalance(ctx, name = ''):
     userId = ctx.author.id
     outputText = 'Your balance is: '
 
-    if displayName != '':
-        userId = await getIdFromDisplayName(ctx, displayName)
+    if name != '':
+        userId = await getIdFromDisplayName(ctx, name)
 
         if userId == -1:
             await ctx.channel.send('No one in the discord has a display name that matches what you supplied')
@@ -226,13 +227,32 @@ async def checkBalance(ctx, displayName = ''):
 
 
 #===============================================
+#   STATS
+#===============================================
+@bot.command(name='stats', aliases=["st"], help='(optional: name) Shows the stats of yourself or another', ignore_extra=True, case_insensitive=True) 
+async def checkStats(ctx, name = ''):
+    userId = ctx.author.id
+    displayName = name.capitalize()
+
+    if displayName != '':
+        userId = await getIdFromDisplayName(ctx, displayName)
+
+        if userId == -1:
+            await ctx.channel.send('No one in the discord has a display name that matches what you supplied')
+            return
+    else:
+        displayName = ctx.author.display_name
+
+    #Get the stats of the player with the specified id
+    await ctx.channel.send(botBank.getPlayerStats(userId, displayName))
+
+
+#===============================================
 #   LEADERBOARD
 #===============================================
 @bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance', ignore_extra=True, case_insensitive=True) 
 async def ranking(ctx):
     userId = ctx.author.id
-
-    print(ctx.author.permissions_in(ctx.channel).administrator)
 
     #Get the latest member list
     members = []
@@ -257,7 +277,7 @@ async def ranking(ctx):
 @bot.command(name='admin', help='Shows admin commands', ignore_extra=True) 
 @commands.has_permissions(administrator=True)
 async def checkAdmin(ctx):
-    adminCommands = ['modify']
+    adminCommands = ['mod']
     output = '===== ADMIN COMMANDS =====\n'
 
     for i in adminCommands:
@@ -284,7 +304,7 @@ async def modifyBalance(ctx, displayName : str, amount : int, hide = 0):
         botBank.updateBalance(userId, amount)
 
         if hide == 0:
-            await ctx.channel.send(displayName + ' has been given ' + str(amount) + ' by the bank! How lucky!')
+            await ctx.channel.send(displayName.capitalize() + ' has been given ' + str(amount) + ' by the bank! How lucky!')
 
 
 #Start the bot
