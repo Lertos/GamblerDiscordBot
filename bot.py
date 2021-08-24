@@ -124,23 +124,29 @@ async def getUserFromId(ctx, userId):
 #===============================================
 #   Processes the fifty game mode outcome
 #===============================================
-async def processFiftyFifty(ctx, userId, name, opponentName, result, amount, mention = False):
+async def processFiftyFifty(ctx, userId, opponentName, result, amount, isPoster):
     payout = amount * result
     outcome = 'WON'
 
+    #If its a loss - only the challenger loses money
     if result == -1:
         outcome = 'LOST'
 
+        if not isPoster:
+            botBank.updateBalance(userId, payout)
+    #If its a win - the poster gets double the payout
+    else:
+        if not isPoster:
+            botBank.updateBalance(userId, payout)
+        else:
+            botBank.updateBalance(userId, payout * 2)
+
     botBank.updatePlayerStats(userId, 'fifty', result)
-    botBank.updateBalance(userId, payout)
 
     #Send the results to the poster as they may not be online
-    if mention:
+    if isPoster:
         userObj = await getUserFromId(ctx, userId)
         await ctx.channel.send(userObj.mention + ' You have **' + outcome + '** against **' + opponentName.capitalize() + '**   (**BET: ' + str(helper.moneyFormat(abs(amount))) + '**)')
-    #Post the results for everyone to see in the channel
-    #else:
-    #    await ctx.channel.send('**' + name + '**' + ' has **' + outcome + '** against **' + opponentName.capitalize() + '**   (**BET: ' + str(helper.moneyFormat(abs(amount))) + '**)')
 
 
 #===============================================
@@ -286,11 +292,11 @@ async def fiftyCreate(ctx, displayName : str):
     botFifty.removePosting(posterId)
 
     if result == 0: #Poster won
-        await processFiftyFifty(ctx, userId, name, displayName, -1, postingAmount)
-        await processFiftyFifty(ctx, posterId, displayName, name, 1, postingAmount, True)
+        await processFiftyFifty(ctx, userId, displayName, -1, postingAmount, False)
+        await processFiftyFifty(ctx, posterId, name, 1, postingAmount, True)
     else: #Challenger won
-        await processFiftyFifty(ctx, userId, name, displayName, 1, postingAmount)
-        await processFiftyFifty(ctx, posterId, displayName, name, -1, postingAmount, True)
+        await processFiftyFifty(ctx, userId, displayName, 1, postingAmount, False)
+        await processFiftyFifty(ctx, posterId, name, -1, postingAmount, True)
 
 
 #===============================================
@@ -304,11 +310,11 @@ async def fiftyRemove(ctx):
     #Check if there is already a posting for this user
     hasPosting = botFifty.doesUserHavePosting(userId)
     if hasPosting:
-        #Remove the posting
-        botFifty.removePosting(userId)
-
         #Give the money back to the user
         botBank.updateBalance(userId, botFifty.getPostingAmountIfExists(name))
+
+        #Remove the posting
+        botFifty.removePosting(userId)
 
         await ctx.channel.send(name + ', your 50/50 posting has been removed successfully.')
     else:
