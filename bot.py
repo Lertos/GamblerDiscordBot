@@ -393,6 +393,16 @@ async def checkStats(ctx, name = ''):
 
 
 #===============================================
+#   GLOBAL STATS
+#===============================================
+@bot.command(name='globalStats', aliases=["gs"], help='Shows the stats of everyone in the channel', ignore_extra=True) 
+async def checkGlobalStats(ctx):
+    
+    #Get the stats of everyone in the channel
+    await ctx.channel.send(botBank.getGlobalStats())
+
+
+#===============================================
 #   LEADERBOARD
 #===============================================
 @bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance', ignore_extra=True) 

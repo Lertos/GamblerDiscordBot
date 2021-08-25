@@ -130,6 +130,22 @@ class Bank:
 
         return output
 
+
+    #Creates a string with all of the stats of the channel
+    def getGlobalStats(self):
+        output = helper.listHeaders('GLOBAL STATS')
+
+        for stat in statSetupInfo.keys():
+            totalStat = 0
+
+            for user in self.balances.keys():
+                totalStat += self.balances[user][stat]
+
+            output += '• ' + statSetupInfo[stat]['display'] + ': ' + str(totalStat) + '\n'
+
+        return output
+
+
     #Find the users id in the members list and returns the display name 
     def getDisplayName(self, userId, members, id):
         for x,y in members:
