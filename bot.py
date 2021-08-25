@@ -3,11 +3,14 @@ import discord
 import bank
 import helper
 import fifty
-from discord.flags import Intents
 import loaner
-from random import randrange, choice
+import trinkets
+
+from discord.flags import Intents
+from random import randrange, choice, random
 from discord.ext import commands
 from dotenv import load_dotenv
+
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -21,6 +24,7 @@ bot = commands.Bot(command_prefix='!', intents=intents, case_insensitive=True)
 botBank = bank.Bank()
 botLoaner = loaner.Loaner()
 botFifty = fifty.FiftyFifty()
+botTrinkets = trinkets.Trinkets()
 
 #Setup variables
 flipPayoutRate = 1
@@ -72,11 +76,11 @@ def validation(userId, amount):
 
     #Check to make sure the amount is positive
     if amount <= 0:
-        resultMsg = 'The betting amount must be over 0$'
+        resultMsg = 'The amount supplied must be over 0$'
 
     #Check to make sure the user has enough money
     elif botBank.balances[str(userId)]['balance'] < amount:
-        resultMsg = 'You do not have enough money to bet that high'
+        resultMsg = 'You do not have enough money'
 
     return resultMsg
 
@@ -84,13 +88,12 @@ def validation(userId, amount):
 #===============================================
 #   Gets the payout based on if the guess was correct
 #===============================================
-def getPayoutResult(userId, amount, multiplier, result, guess):
+def getPayoutResult(userId, amount, multiplier, result):
     #Calculate the payout to the user
-    if result == guess:
+    if result == True:
         payout = amount * multiplier
     else:
         payout = -amount
-    
 
     #Add the payout to the users balance
     botBank.updateBalance(userId, payout)
@@ -157,6 +160,8 @@ async def flipCoin(ctx, guess : str, amount : int):
     userId = ctx.author.id
     name = str(ctx.author.display_name)
 
+    choices = ['h','t']
+
     #Check to make sure the player supplied either a 'h' or a 't'
     if guess != 'h' and guess != 't':
         await ctx.channel.send(name + ', you must supply either ''h'' (heads) or ''t'' (tails)')
@@ -169,18 +174,28 @@ async def flipCoin(ctx, guess : str, amount : int):
         await ctx.channel.send(resultMsg)
         return
 
-    #Flip the coin and store the result
-    result = choice(['h', 't'])
+    #Roll the dice and store the result
+    result = random()
 
-    payout = getPayoutResult(userId, amount, flipPayoutRate, result, guess)
+    #Get the players additional chance of winning
+    bonus = botTrinkets.getBonusFromTrinkets(userId, botBank.balances)
+
+    #Check if the user scored above the chance of winning
+    if result >= (0.5 - bonus):
+        result = True
+    else:
+        choices.remove(guess)
+        result = False
+
+    payout = getPayoutResult(userId, amount, flipPayoutRate, result)
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
         botBank.updatePlayerStats(userId, 'flip', -1)
-        await ctx.channel.send(':regional_indicator_' + result + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
+        await ctx.channel.send(':regional_indicator_' + choices[0] + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updatePlayerStats(userId, 'flip', 1)
-        await ctx.channel.send(':regional_indicator_' + result + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+        await ctx.channel.send(':regional_indicator_' + guess + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
 
 
 #===============================================
@@ -204,17 +219,26 @@ async def rollDice(ctx, guess : int, amount : int):
         return
 
     #Roll the dice and store the result
-    result = randrange(1, 7)
+    result = random()
 
-    payout = getPayoutResult(userId, amount, rollPayoutRate, result, guess)
+    #Get the players additional chance of winning
+    bonus = botTrinkets.getBonusFromTrinkets(userId, botBank.balances)
+
+    #Check if the user scored above the chance of winning
+    if result >= (0.83333 - bonus):
+        result = True
+    else:
+        result = False
+
+    payout = getPayoutResult(userId, amount, rollPayoutRate, result)
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
         botBank.updatePlayerStats(userId, 'roll', -1)
-        await ctx.channel.send(helper.getRollNumberWord(result) + '  ' + name + ', you guessed ' + str(guess) + ' and **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
+        await ctx.channel.send(helper.getRollNumberWord(False, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updatePlayerStats(userId, 'roll', 1)
-        await ctx.channel.send(helper.getRollNumberWord(result) + '  ' + name + ', you guessed ' + str(guess) + ' and **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+        await ctx.channel.send(helper.getRollNumberWord(True, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
 
 
 #===============================================
@@ -403,6 +427,148 @@ async def checkGlobalStats(ctx):
 
 
 #===============================================
+#   TRINKET NEXT
+#===============================================
+@bot.command(name='trinketNext', aliases=["tn"], help='Shows the next trinket you can buy', ignore_extra=True) 
+async def trinketNext(ctx):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    #Get the players current level
+    level = botTrinkets.getTrinketLevel(userId, botBank.balances)
+
+    if level == -1:
+        await ctx.channel.send(name + ', you do not have a trinkets value. Contact an administrator')
+
+    #Get the price of the next level trinket
+    price = botTrinkets.getNextTrinketPrice(userId, botBank.balances)
+
+    await ctx.channel.send(name + ', you have ' + str(level) + ' trinkets. The next one costs ' + str(helper.moneyFormat(price)))
+
+
+#===============================================
+#   TRINKET CHECK
+#===============================================
+@bot.command(name='trinketCheck', aliases=["tc"], help='Shows current bonuses from your trinkets', ignore_extra=True) 
+async def trinketCheck(ctx):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    #Get the bonus based on the current level
+    bonus = botTrinkets.getBonusFromTrinkets(userId, botBank.balances)
+
+    await ctx.channel.send(name + ', you have an additional ' + str(100 * bonus) + '% chance to win in games against the House')
+
+
+#===============================================
+#   TRINKET BUY
+#===============================================
+@bot.command(name='trinketBuy', aliases=["tb"], help='Buys the next available trinket', ignore_extra=True) 
+async def trinketBuy(ctx):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    #Get the price of the next trinket
+    price = botTrinkets.getNextTrinketPrice(userId, botBank.balances)
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, price)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
+
+    #Increment the trinket level of the user
+    botTrinkets.incrementTrinketAmount(userId, botBank.balances)
+
+    #Get the new level
+    level = botTrinkets.getTrinketLevel(userId, botBank.balances)
+
+    #Update the balance of the user
+    botBank.updateBalance(userId, -price)
+
+    await ctx.channel.send(name + ', you bought trinket ' + str(level) + ' for ' + str(helper.moneyFormat(price)))
+
+
+#===============================================
+#   TRINKET TOP
+#===============================================
+@bot.command(name='trinketTop', aliases=["tt"], help='Shows who has the most trinkets', ignore_extra=True) 
+async def trinketTop(ctx):
+    userId = ctx.author.id
+
+    #Get the latest member list
+    members = []
+    async for member in ctx.guild.fetch_members(limit=None):
+        members.append((member.id,member.display_name))
+    
+    #Create the leaderboard string
+    message = botTrinkets.getTopTrinkets(userId, members, botBank.balances)
+
+    await ctx.channel.send(message)
+
+
+#===============================================
+#   GOONS CLAIM
+#===============================================
+@bot.command(name='goonsClaim', aliases=["gc"], help='Claims all offline income from your goons', ignore_extra=True) 
+async def goonsClaim(ctx):
+    
+
+    await ctx.channel.send()
+
+
+#===============================================
+#   GOONS NEXT
+#===============================================
+@bot.command(name='goonsNext', aliases=["gn"], help='Shows the next goon you can buy', ignore_extra=True) 
+async def goonsNext(ctx):
+    
+
+    await ctx.channel.send()
+
+
+#===============================================
+#   GOONS BUY
+#===============================================
+@bot.command(name='goonsBuy', aliases=["gb"], help='Buys the next available goon', ignore_extra=True) 
+async def goonsBuy(ctx):
+    
+
+    await ctx.channel.send()
+
+
+#===============================================
+#   GOONS INFO
+#===============================================
+@bot.command(name='goonsInfo', aliases=["gi"], help='Shows all goon info and upgrade costs') 
+async def goonsInfo(ctx):
+    
+
+    await ctx.channel.send()
+
+
+#===============================================
+#   GOONS UPGRADE
+#===============================================
+@bot.command(name='goonsUpgrade', aliases=["gu"], help='[goon #]', brief='[goon #] - Upgrades the specified goon', ignore_extra=True) 
+async def goonsUpgrade(ctx, goonNumber : int):
+    
+
+    await ctx.channel.send()
+
+
+#===============================================
+#   GOONS TOP
+#===============================================
+@bot.command(name='goonsTop', aliases=["gt"], help='[goon #]', brief='[goon #] - Shows the top levels of a goon', ignore_extra=True) 
+async def goonsTop(ctx):
+    
+
+    await ctx.channel.send()
+
+
+#===============================================
 #   LEADERBOARD
 #===============================================
 @bot.command(name='ranking', aliases=["rank","ra"], help='Ranks users based on their balance', ignore_extra=True) 
@@ -422,7 +588,8 @@ async def ranking(ctx):
 
 #===============================================
 #
-#   ADMIN COMMANDS
+#   ADMIN COMMANDS - When a new one is added, 
+#                    add it to the list below
 #
 #===============================================
 

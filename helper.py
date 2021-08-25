@@ -1,4 +1,5 @@
 import math
+from random import choice
 
 #Returns the amount back with proper formatting (such as commas)
 def moneyFormat(money):
@@ -10,7 +11,16 @@ def listHeaders(text):
     return ':moneybag: :moneybag: :moneybag:   **' + str(text) + '**   :moneybag: :moneybag: :moneybag:\n\n'
 
 
-def getRollNumberWord(roll):
+#Used to show dice rolls as discord emojis given an integer dice result
+def getRollNumberWord(isWinner, guess):
+    sides = [1,2,3,4,5,6]
+
+    if isWinner == False:
+        sides.remove(int(guess))
+        roll = choice(sides)
+    else:
+        roll = guess
+
     if roll == 1:
         return ':one:'
     elif roll == 2:
@@ -23,3 +33,13 @@ def getRollNumberWord(roll):
         return ':five:'
     elif roll == 6:
         return ':six:'
+
+
+#Find the users id in the members list and returns the display name 
+def getDisplayName(userId, members, id):
+    for x,y in members:
+        if str(x) == str(id):
+            if str(userId) == str(id):
+                return '**' + str(y) + '**'
+            else:
+                return y

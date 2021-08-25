@@ -13,13 +13,15 @@ statSetupInfo = {
     'rollWins' : { 'display' : 'Dice Roll Wins', 'startAmount' : 0 },
     'rollLosses' : { 'display' : 'Dice Roll Losses', 'startAmount' : 0 },
     'fiftyWins' : { 'display' : '50/50 Wins', 'startAmount' : 0 },
-    'fiftyLosses' : { 'display' : '50/50 Losses', 'startAmount' : 0 }
+    'fiftyLosses' : { 'display' : '50/50 Losses', 'startAmount' : 0 },
+    'trinkets' : { 'display' : 'Trinkets', 'startAmount' : 0 }
 }
 
 
 class Bank:   
     def __init__(self):
         self.balances = self.loadBankBalances(balanceFile)
+        self.addNewKeys()
 
 
     #Reads the json file containing all balances
@@ -32,6 +34,21 @@ class Bank:
     def saveBalances(self):
         with open(balanceFile,'w') as f:
             f.write(json.dumps(self.balances))
+
+
+    #Adds newly added keys to the stats of each player
+    def addNewKeys(self):
+        changed = False
+
+        for key in statSetupInfo.keys():
+            for user in self.balances:
+                if key not in self.balances[user]:
+                    self.balances[user][key] = statSetupInfo[key]['startAmount']
+                    changed = True
+        
+        #If there were any changes, save the file immediately
+        if changed:
+            self.saveBalances()
 
 
     #Updates the balance of a user and updates stats
@@ -112,7 +129,7 @@ class Bank:
         header = helper.listHeaders('TOP BALANCES')
 
         sortedBalances = sorted(self.balances.items(), key=lambda x: x[1]['balance'], reverse=True)
-        formatted = list(map(lambda x: str(helper.moneyFormat(x[1]['balance'])) + ' - ' + self.getDisplayName(userId, members, x[0]), sortedBalances))
+        formatted = list(map(lambda x: str(helper.moneyFormat(x[1]['balance'])) + ' - ' + helper.getDisplayName(userId, members, x[0]), sortedBalances))
 
         return header + '\n'.join(formatted)
 
@@ -144,13 +161,3 @@ class Bank:
             output += '• ' + statSetupInfo[stat]['display'] + ': ' + str(totalStat) + '\n'
 
         return output
-
-
-    #Find the users id in the members list and returns the display name 
-    def getDisplayName(self, userId, members, id):
-        for x,y in members:
-            if str(x) == str(id):
-                if str(userId) == str(id):
-                    return '**' + str(y) + '**'
-                else:
-                    return y
