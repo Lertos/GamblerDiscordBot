@@ -599,7 +599,7 @@ async def ranking(ctx):
 @bot.command(name='admin', help='Shows admin commands', ignore_extra=True) 
 @commands.has_permissions(administrator=True)
 async def checkAdmin(ctx):
-    adminCommands = ['mod']
+    adminCommands = ['mod','reset']
     output = '===== ADMIN COMMANDS =====\n'
 
     for i in adminCommands:
@@ -612,12 +612,9 @@ async def checkAdmin(ctx):
 #===============================================
 #   MOD
 #===============================================
-@bot.command(name='mod', hidden=True, help='[displayName] [amount] [hide] - Modifies a players balance') 
+@bot.command(name='mod', hidden=True, help='[displayName] [amount] - Modifies a players balance') 
 @commands.has_permissions(administrator=True)
-async def modifyBalance(ctx, displayName : str, amount : int, hide = 0):
-    if hide not in [0,1]:
-        await ctx.author.send('Unless [hide] is 1 (to hide the output) it is not needed')
-    
+async def modifyBalance(ctx, displayName : str, amount : int):
     userId = await getIdFromDisplayName(ctx, displayName)
     
     if userId == -1:
@@ -625,8 +622,23 @@ async def modifyBalance(ctx, displayName : str, amount : int, hide = 0):
     else:
         botBank.updateBalance(userId, amount)
 
-        if hide == 0:
-            await ctx.channel.send(displayName.capitalize() + ' has been given ' + str(amount) + ' by the bank! How lucky!')
+    await ctx.channel.send(displayName.capitalize() + ' has been given ' + str(amount) + ' by the bank! How lucky!')
+
+
+#===============================================
+#   RESET STATS
+#===============================================
+@bot.command(name='reset', hidden=True, help='[displayName] - Resets a players stats') 
+@commands.has_permissions(administrator=True)
+async def resetPlayerStats(ctx, displayName : str):
+    userId = await getIdFromDisplayName(ctx, displayName)
+    
+    if userId == -1:
+        await ctx.author.send('No one in the discord has a display name that matches what you supplied to the add command')
+    else:
+        botBank.resetPlayerStats(userId)
+
+    await ctx.channel.send(displayName.capitalize() + ' has had their stats reset')
 
 
 #Start the bot

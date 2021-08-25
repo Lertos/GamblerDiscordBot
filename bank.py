@@ -161,3 +161,20 @@ class Bank:
             output += '• ' + statSetupInfo[stat]['display'] + ': ' + str(totalStat) + '\n'
 
         return output
+
+
+    #Creates a string with all of the stats of the channel
+    def resetPlayerStats(self, userId):
+        id = str(userId)
+
+        if id in self.balances:
+            changed = False
+
+            for key in statSetupInfo.keys():
+                if key in self.balances[id]:
+                    self.balances[id][key] = statSetupInfo[key]['startAmount']
+                    changed = True
+            
+            #If there were any changes, save the file immediately
+            if changed:
+                self.saveBalances()
