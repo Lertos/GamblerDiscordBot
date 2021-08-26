@@ -14,6 +14,10 @@ statSetupInfo = {
     'flipLosses' : { 'display' : 'Coin Flip Losses', 'startAmount' : 0 },
     'rollWins' : { 'display' : 'Dice Roll Wins', 'startAmount' : 0 },
     'rollLosses' : { 'display' : 'Dice Roll Losses', 'startAmount' : 0 },
+    'suitWins' : { 'display' : 'Suit Wins', 'startAmount' : 0 },
+    'suitLosses' : { 'display' : 'Suit Losses', 'startAmount' : 0 },
+    'xyzWins' : { 'display' : 'XYZ Wins', 'startAmount' : 0 },
+    'xyzLosses' : { 'display' : 'XYZ Losses', 'startAmount' : 0 },
     'fiftyWins' : { 'display' : '50/50 Wins', 'startAmount' : 0 },
     'fiftyLosses' : { 'display' : '50/50 Losses', 'startAmount' : 0 },
     'trinkets' : { 'display' : 'Trinkets', 'startAmount' : 0 }
@@ -53,89 +57,8 @@ class Bank:
             self.saveBalances()
 
 
-    #Update player stat given the key and the 
-
-
-    #Updates the balance of a user and updates stats
-    def updateBalance(self, userId, amount):
-        id = str(userId)
-
-        if id in self.balances:
-            self.balances[id]['balance'] = self.balances[id]['balance'] + amount
-            
-            #Instead of making users do !loan, just give them 100
-            if self.balances[id]['balance'] == 0:
-                self.balances[id]['balance'] = loanAmount
-
-            self.updatePlayerTotalStats(id, amount)
-            self.saveBalances()
-
-
-    #Updates the totalWon and totalLost stats of a player based on outcome
-    def updatePlayerTotalStats(self, userId, amount):
-        if amount > 0:
-            #Insert the stat key if it doesnt exist for the user 
-            if 'totalWon' not in self.balances[userId]:
-                self.balances[userId]['totalWon'] = 0
-
-            self.balances[userId]['totalWon'] = self.balances[userId]['totalWon'] + amount
-
-        elif amount < 0:
-            #Insert the stat key if it doesnt exist for the user 
-            if 'totalLost' not in self.balances[userId]:
-                self.balances[userId]['totalLost'] = 0
-
-            self.balances[userId]['totalLost'] = self.balances[userId]['totalLost'] + abs(amount)
-
-
-    #Updates stats of a user of a specific game type based on the outcome
-    def updatePlayerStats(self, userId, gameType, outcome):
-        id = str(userId)
-        key = ''
-
-        if outcome == -1:
-            key = gameType + 'Losses'
-        elif outcome == 1:
-            key = gameType + 'Wins'
-        
-        #Insert the stat key if it doesnt exist for the user 
-        if key not in self.balances[id]:
-            self.balances[id][key] = 0
-
-        self.balances[id][key] = self.balances[id][key] + 1
-
-        self.saveBalances()
-
-
-    #Increment the loan stat of a player
-    def updateLoanStat(self, userId):
-        id = str(userId)
-
-        #Insert the stat key if it doesnt exist for the user 
-        if 'loans' not in self.balances[id].keys():
-            self.balances[id]['loans'] = 1
-        else:
-            self.balances[id]['loans'] = self.balances[id]['loans'] + 1
-
-        self.saveBalances()
-
-
-    #Give players a loan if they are at minimum cash
-    def giveUserLoan(self, userId):
-        id = str(userId)
-
-        #Check if the player has a zero balance
-        if self.balances[id]['balance'] == 0:
-            self.balances[id]['balance'] = loanAmount
-            self.saveBalances()
-            
-            return loanAmount
-        else:
-            return -1
-
-
-    #If the user is new add them with the default starting amount
-    def createNewBalance(self, userId):
+    #If the user is new add them with default starting amounts
+    def createNewUserStats(self, userId):
         id = str(userId)
 
         if id not in self.balances:
@@ -147,8 +70,45 @@ class Bank:
             self.saveBalances()
 
 
-    #Calculates the leaderboard
-    def getLeaderboard(self, userId, members):
+    #Update player stat given the userId, key and value to add
+    def updatePlayerStat(self, userId, key, valueToAdd):
+        id = str(userId)
+        self.createNewUserStats(id)
+
+        self.balances[id][key] = self.balances[id][key] + valueToAdd
+        self.saveBalances()
+
+
+    #Updates the balance of a user and updates stats
+    def updateBalance(self, userId, amount):
+        id = str(userId)
+        self.createNewUserStats(id)
+
+        self.balances[id]['balance'] = self.balances[id]['balance'] + amount
+        
+        #Instead of making users do !loan, just give them 100
+        if self.balances[id]['balance'] == 0:
+            self.balances[id]['balance'] = loanAmount
+            self.updatePlayerStat(id, 'resets', 1)
+
+        if amount > 0:
+            self.balances[id]['totalWon'] = self.balances[id]['totalWon'] + amount
+        else:
+            self.balances[id]['totalLost'] = self.balances[id]['totalLost'] + abs(amount)
+
+        self.saveBalances()
+
+
+    #Updates stats of a user of a specific game type based on the outcome
+    def updateModeStats(self, userId, gameType, outcome):
+        if outcome == -1:
+            self.updatePlayerStat(userId, gameType + 'Wins', 1)
+        elif outcome == 1:
+            self.updatePlayerStat(userId, gameType + 'Losses', 1)
+
+
+    #Calculates the leaderboard based on balances
+    def getTopBalances(self, userId, members):
         header = helper.listHeaders('TOP BALANCES')
 
         sortedBalances = sorted(self.balances.items(), key=lambda x: x[1]['balance'], reverse=True)
@@ -160,10 +120,9 @@ class Bank:
     #Creates a string with all of the player stats in it
     def getPlayerStats(self, userId, name):
         id = str(userId)
-        output = helper.listHeaders('STATS FOR ' + name)
+        self.createNewUserStats(id)
 
-        if id not in self.balances:
-            self.createNewBalance(userId)
+        output = helper.listHeaders('STATS FOR ' + name)
 
         for key in statSetupInfo.keys():
             output += '• ' + statSetupInfo[key]['display'] + ': ' + str(self.balances[id][key]) + '\n'

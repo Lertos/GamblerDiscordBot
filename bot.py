@@ -29,7 +29,8 @@ botTrinkets = trinkets.Trinkets()
 #Setup variables
 flipPayoutRate = 1
 rollPayoutRate = 6
-blackjackPayoutRate = 1
+suitPayoutRate = 4
+xyzPayoutRate = 3
 
 #===============================================
 #   ON READY
@@ -57,22 +58,13 @@ async def on_command_error(ctx, exception):
 
 
 #===============================================
-#   Check to make sure the user has a balance
-#   If not, add them to the bank
-#===============================================
-def createUserBalanceIfNeeded(userId):
-    if str(userId) not in botBank.balances:
-        botBank.createNewBalance(userId)
-
-
-#===============================================
 #   Validation checks for any type of betting
 #===============================================
 def validation(userId, amount):
     resultMsg = ''
 
     #Create new balance if user doesn't exist yet
-    createUserBalanceIfNeeded(userId)
+    botBank.createNewUserStats(userId)
 
     #Check to make sure the amount is positive
     if amount <= 0:
@@ -107,8 +99,7 @@ def getPayoutResult(userId, amount, multiplier, result):
 async def getIdFromDisplayName(ctx, displayName):
     async for member in ctx.guild.fetch_members(limit=None):
         if displayName.lower() == member.display_name.lower():
-            return member.id
-    
+            return member.id  
     return -1
 
 
@@ -122,6 +113,21 @@ async def getUserFromId(ctx, userId):
         if id == member.id:
             return member
     return -1
+
+
+#===============================================
+#   Randomly generates a number and checks the win condition
+#===============================================
+def isWinner(userId, balances, chanceToWin):
+    result = random()
+
+    #Get the players additional chance of winning
+    bonus = botTrinkets.getBonusFromTrinkets(userId, balances)
+
+    #Check if the user scored above the chance of winning
+    if result <= (chanceToWin + bonus):
+        return True
+    return False
 
 
 #===============================================
@@ -144,7 +150,7 @@ async def processFiftyFifty(ctx, userId, opponentName, result, amount, isPoster)
         else:
             botBank.updateBalance(userId, payout * 2)
 
-    botBank.updatePlayerStats(userId, 'fifty', result)
+    botBank.updateModeStats(userId, 'fifty', result)
 
     #Send the results to the poster as they may not be online
     if isPoster:
@@ -163,7 +169,7 @@ async def flipCoin(ctx, guess : str, amount : int):
     choices = ['h','t']
 
     #Check to make sure the player supplied either a 'h' or a 't'
-    if guess != 'h' and guess != 't':
+    if guess not in choices:
         await ctx.channel.send(name + ', you must supply either ''h'' (heads) or ''t'' (tails)')
         return
 
@@ -174,27 +180,19 @@ async def flipCoin(ctx, guess : str, amount : int):
         await ctx.channel.send(resultMsg)
         return
 
-    #Roll the dice and store the result
-    result = random()
+    result = isWinner(userId, botBank.balances, 0.5)
 
-    #Get the players additional chance of winning
-    bonus = botTrinkets.getBonusFromTrinkets(userId, botBank.balances)
-
-    #Check if the user scored above the chance of winning
-    if result >= (0.5 - bonus):
-        result = True
-    else:
+    if result == False:
         choices.remove(guess)
-        result = False
 
     payout = getPayoutResult(userId, amount, flipPayoutRate, result)
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
-        botBank.updatePlayerStats(userId, 'flip', -1)
+        botBank.updateModeStats(userId, 'flip', -1)
         await ctx.channel.send(':regional_indicator_' + choices[0] + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
-        botBank.updatePlayerStats(userId, 'flip', 1)
+        botBank.updateModeStats(userId, 'flip', 1)
         await ctx.channel.send(':regional_indicator_' + guess + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
 
 
@@ -218,27 +216,91 @@ async def rollDice(ctx, guess : int, amount : int):
         await ctx.channel.send(resultMsg)
         return
 
-    #Roll the dice and store the result
-    result = random()
-
-    #Get the players additional chance of winning
-    bonus = botTrinkets.getBonusFromTrinkets(userId, botBank.balances)
-
-    #Check if the user scored above the chance of winning
-    if result >= (0.83333 - bonus):
-        result = True
-    else:
-        result = False
+    result = result = isWinner(userId, botBank.balances, 0.16666)
 
     payout = getPayoutResult(userId, amount, rollPayoutRate, result)
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
-        botBank.updatePlayerStats(userId, 'roll', -1)
+        botBank.updateModeStats(userId, 'roll', -1)
         await ctx.channel.send(helper.getRollNumberWord(False, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
-        botBank.updatePlayerStats(userId, 'roll', 1)
+        botBank.updateModeStats(userId, 'roll', 1)
         await ctx.channel.send(helper.getRollNumberWord(True, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+
+
+#===============================================
+#   SUIT
+#===============================================
+@bot.command(name='suit', aliases=["s"], help='[h|s|d|c] [bet amount]', brief='[h|s|d|c] [bet amount] - Chooses a random suit from a deck of cards (1/4 chance, 4 * payout)',  ignore_extra=True) 
+async def chooseSuit(ctx, guess : str, amount : int):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    choices = ['h','s','d','c']
+
+    #Check to make sure the player supplied either a 'h' or a 't'
+    if guess not in choices:
+        await ctx.channel.send(name + ', you must supply either ''h'' (hearts), ''s'' (spades), ''d'' (diamonds), or ''c'' (clubs)')
+        return
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, amount)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
+
+    result = isWinner(userId, botBank.balances, 0.25)
+
+    if result == False:
+        choices.remove(guess)
+
+    payout = getPayoutResult(userId, amount, suitPayoutRate, result)
+
+    #Send the user the message of the payout and whether they won
+    if payout < 0:
+        botBank.updateModeStats(userId, 'suit', -1)
+        suit = helper.getCardSuit(False, guess)
+        await ctx.channel.send(helper.getNumberEmojiFromInt(randrange(1,14)) + ' of ' + suit + '  ' + name + ', you guessed ' + suit + ' and **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
+    else:
+        botBank.updateModeStats(userId, 'suit', 1)
+        suit = helper.getCardSuit(True, guess)
+        await ctx.channel.send(helper.getNumberEmojiFromInt(randrange(1,14)) + ' of ' + suit + '  ' + name + ', you guessed ' + suit + ' and **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+
+
+#===============================================
+#   XYZ
+#===============================================
+@bot.command(name='x', aliases=["y","z"], help='[bet amount]', brief='[bet amount] - Chooses X, Y, or Z (1/3 chance, 3 * payout)',  ignore_extra=True) 
+async def chooseXYZ(ctx, amount : int):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    choices = ['x','y','z']
+    guess = ctx.invoked_with[0]
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, amount)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
+
+    result = isWinner(userId, botBank.balances, 0.33333)
+
+    if result == False:
+        choices.remove(guess)
+
+    payout = getPayoutResult(userId, amount, xyzPayoutRate, result)
+
+    #Send the user the message of the payout and whether they won
+    if payout < 0:
+        botBank.updateModeStats(userId, 'xyz', -1)
+        await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
+    else:
+        botBank.updateModeStats(userId, 'xyz', 1)
+        await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
 
 
 #===============================================
@@ -346,16 +408,12 @@ async def fiftyRemove(ctx):
 
 
 #===============================================
-#   21
-#===============================================
-
-
-#===============================================
 #   LOAN
 #===============================================
-''' OLD LOAN CODE
 @bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
 async def getLoan(ctx):
+    return #Disable the command for now
+
     userId = ctx.author.id
     name = str(ctx.author.display_name)
 
@@ -369,22 +427,6 @@ async def getLoan(ctx):
         botBank.updateBalance(userId, loanAmount)
         botBank.updateLoanStat(userId)
         await ctx.channel.send(name + ', you have been loaned: ' + str(helper.moneyFormat(loanAmount)))
-'''
-@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
-async def getLoan(ctx):
-    userId = ctx.author.id
-    name = str(ctx.author.display_name)
-
-    #Check if the user has 0 balance - if so allow the loan
-    if botBank.balances[str(userId)]['balance'] == 0:
-        loanAmount = botBank.giveUserLoan(userId)
-
-        if loanAmount == -1:
-            await ctx.channel.send(name + ', you need to have a balance of 0$')
-        else:
-            await ctx.channel.send(name + ', you have been loaned: ' + str(helper.moneyFormat(loanAmount)))
-    else:
-        await ctx.channel.send(name + ', you need to have a balance of 0$')
 
 
 #===============================================
@@ -405,7 +447,7 @@ async def checkBalance(ctx, name = ''):
         outputText = 'Their balance is: '
 
     #Create new balance if user doesn't exist yet
-    createUserBalanceIfNeeded(userId)
+    botBank.createNewUserStats(userId)
 
     balance = helper.moneyFormat(botBank.balances[str(userId)]['balance'])
 
@@ -611,7 +653,7 @@ async def ranking(ctx):
         members.append((member.id,member.display_name))
     
     #Create the leaderboard string
-    message = botBank.getLeaderboard(userId, members)
+    message = botBank.getTopBalances(userId, members)
 
     await ctx.channel.send(message)
 

@@ -20,19 +20,57 @@ def getRollNumberWord(isWinner, guess):
         roll = choice(sides)
     else:
         roll = guess
+        return getNumberEmojiFromInt(roll)
 
-    if roll == 1:
-        return ':one:'
-    elif roll == 2:
+
+#Used to get a random card suit
+def getCardSuit(isWinner, guess):
+    suits = ['h','s','d','c']
+
+    if isWinner == False:
+        suits.remove(guess)
+        suit = choice(suits)
+    else:
+        suit = guess
+
+    if suit == 'h':
+        return ':hearts:'
+    elif suit == 's':
+        return ':spades:'
+    elif suit == 'd':
+        return ':diamonds:'
+    elif suit == 'c':
+        return ':clubs:'
+
+
+#Used to get a random card suit
+def getNumberEmojiFromInt(number):
+    if number == 1:
+        return ':regional_indicator_a:'
+    elif number == 2:
         return ':two:'
-    elif roll == 3:
+    elif number == 3:
         return ':three:'
-    elif roll == 4:
+    elif number == 4:
         return ':four:'
-    elif roll == 5:
+    elif number == 5:
         return ':five:'
-    elif roll == 6:
+    elif number == 6:
         return ':six:'
+    elif number == 7:
+        return ':seven:'
+    elif number == 8:
+        return ':eight:'
+    elif number == 9:
+        return ':nine:'
+    elif number == 10:
+        return ':one::zero:'
+    elif number == 11:
+        return ':regional_indicator_j:'
+    elif number == 12:
+        return ':regional_indicator_q:'
+    elif number == 13:
+        return ':regional_indicator_k:'
 
 
 #Find the users id in the members list and returns the display name 
