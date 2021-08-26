@@ -5,6 +5,7 @@ import helper
 import fifty
 import loaner
 import trinkets
+import goons
 
 from discord.flags import Intents
 from random import randrange, choice, random
@@ -25,12 +26,13 @@ botBank = bank.Bank()
 botLoaner = loaner.Loaner()
 botFifty = fifty.FiftyFifty()
 botTrinkets = trinkets.Trinkets()
+botGoons = goons.Goons()
 
 #Setup variables
 flipPayoutRate = 1
-rollPayoutRate = 6
-suitPayoutRate = 4
-xyzPayoutRate = 3
+rollPayoutRate = 5
+suitPayoutRate = 3
+xyzPayoutRate = 2
 
 #===============================================
 #   ON READY
@@ -217,7 +219,7 @@ async def rollDice(ctx, guess : int, amount : int):
         return
 
     result = result = isWinner(userId, botBank.balances, 0.16666)
-
+    
     payout = getPayoutResult(userId, amount, rollPayoutRate, result)
 
     #Send the user the message of the payout and whether they won
@@ -331,7 +333,7 @@ async def fiftyCreate(ctx, amount : int):
         return
 
     #Take the money from the user
-    botBank.updateBalance(userId, -amount)
+    botBank.updateBalance(userId, -amount, False)
 
     await ctx.channel.send(name + ', you have created a 50/50 posting for ' + str(helper.moneyFormat(amount)))
 
@@ -595,9 +597,18 @@ async def goonsClaim(ctx):
 #===============================================
 @bot.command(name='goonsNext', aliases=["gn"], help='Shows the next goon you can buy', ignore_extra=True) 
 async def goonsNext(ctx):
-    
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
 
-    await ctx.channel.send()
+    #Get the players next available goon purchase
+    goonNumber, price  = botGoons.getNextAvailableGoon(userId, botBank.balances)
+
+    #Check to see if they are at the maximum amount of trinkets
+    if price == -1:
+        await ctx.channel.send(name + ', you have already purchased all available goons')
+        return
+
+    await ctx.channel.send(name + ', the next goon (#' + str(goonNumber) + ') you can purchase will cost ' + str(helper.moneyFormat(price)))
 
 
 #===============================================
@@ -605,9 +616,31 @@ async def goonsNext(ctx):
 #===============================================
 @bot.command(name='goonsBuy', aliases=["gb"], help='Buys the next available goon', ignore_extra=True) 
 async def goonsBuy(ctx):
-    
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
 
-    await ctx.channel.send()
+    #Get the players next available goon purchase
+    goonNumber, price  = botGoons.getNextAvailableGoon(userId, botBank.balances)
+
+    #Check to see if they are at the maximum amount of trinkets
+    if price == -1:
+        await ctx.channel.send(name + ', you have already purchased all available goons')
+        return
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, price)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
+
+    #Increment the trinket level of the user
+    botGoons.incrementGoonAmount(userId, botBank.balances, goonNumber)
+
+    #Update the balance of the user
+    botBank.updateBalance(userId, -price)
+
+    await ctx.channel.send(name + ', Goon ' + str(goonNumber) + ' will now start making cash for you on the side. The goon cost you ' + str(helper.moneyFormat(price)))
 
 
 #===============================================
@@ -615,9 +648,11 @@ async def goonsBuy(ctx):
 #===============================================
 @bot.command(name='goonsInfo', aliases=["gi"], help='Shows all goon info and upgrade costs') 
 async def goonsInfo(ctx):
-    
+    userId = ctx.author.id
 
-    await ctx.channel.send()
+    output = botGoons.getGoonLevels(userId, botBank.balances[str(userId)])
+
+    await ctx.channel.send(output)
 
 
 #===============================================
@@ -634,10 +669,18 @@ async def goonsUpgrade(ctx, goonNumber : int):
 #   GOONS TOP
 #===============================================
 @bot.command(name='goonsTop', aliases=["gt"], help='[goon #]', brief='[goon #] - Shows the top levels of a goon', ignore_extra=True) 
-async def goonsTop(ctx):
-    
+async def goonsTop(ctx, goonNumber : int):
+    userId = ctx.author.id
 
-    await ctx.channel.send()
+    #Get the latest member list
+    members = []
+    async for member in ctx.guild.fetch_members(limit=None):
+        members.append((member.id,member.display_name))
+    
+    #Create the leaderboard string
+    message = botGoons.getTopGoonLevels(userId, members, botBank.balances, goonNumber)
+
+    await ctx.channel.send(message)
 
 
 #===============================================

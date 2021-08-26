@@ -8,7 +8,7 @@ def moneyFormat(money):
 
 #Returns a formatted header for any list, given the main text
 def listHeaders(text):
-    return ':moneybag: :moneybag: :moneybag:   **' + str(text) + '**   :moneybag: :moneybag: :moneybag:\n\n'
+    return ':arrow_right:  **' + str(text) + '**  :arrow_left:\n\n'
 
 
 #Used to show dice rolls as discord emojis given an integer dice result
@@ -20,7 +20,8 @@ def getRollNumberWord(isWinner, guess):
         roll = choice(sides)
     else:
         roll = guess
-        return getNumberEmojiFromInt(roll)
+
+    return getNumberEmojiFromInt(roll)
 
 
 #Used to get a random card suit

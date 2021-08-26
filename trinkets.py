@@ -1,12 +1,15 @@
 import helper
 
 
+bonusPerLevel = 0.0025
+costPerLevel = 500
+costMultiplier = 1.25
+maxTrinketLevel = 60
+
+
 class Trinkets:   
     def __init__(self):
-        self.bonusPerLevel = 0.0025
-        self.costPerLevel = 500
-        self.costMultiplier = 1.25
-        self.maxTrinketLevel = 60
+        pass
 
 
     #Gets the trinket level given a user id
@@ -26,14 +29,14 @@ class Trinkets:
         if level == -1:
             return 0
         else:
-            return level * self.bonusPerLevel
+            return level * bonusPerLevel
 
 
     #Gets the price of the next trinket available
     def getNextTrinketPrice(self, userId, balances):
         level = self.getTrinketLevel(userId, balances)
         
-        return self.costPerLevel * (self.costMultiplier * (level + 1))
+        return costPerLevel * (costMultiplier * (level + 1))
 
 
     #Increments the trinket value for the user
@@ -58,5 +61,6 @@ class Trinkets:
 
     #Get the max level so players cannot go over
     def getMaxTrinketLevel(self):
-        return self.maxTrinketLevel
+        return maxTrinketLevel
+
 

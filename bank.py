@@ -9,7 +9,7 @@ statSetupInfo = {
     'totalWon' : { 'display' : 'Total Money Won', 'startAmount' : 0 },
     'totalLost' : { 'display' : 'Total Money Lost', 'startAmount' : 0 },
     'loans' : { 'display' : 'Loans Given', 'startAmount' : 0 },
-    'resets' : { 'display' : 'Times Balance Hit 0', 'startAmount' : 0 },
+    'resets' : { 'display' : 'Times Balance Hit ZERO', 'startAmount' : 0 },
     'flipWins' : { 'display' : 'Coin Flip Wins', 'startAmount' : 0 },
     'flipLosses' : { 'display' : 'Coin Flip Losses', 'startAmount' : 0 },
     'rollWins' : { 'display' : 'Dice Roll Wins', 'startAmount' : 0 },
@@ -20,7 +20,13 @@ statSetupInfo = {
     'xyzLosses' : { 'display' : 'XYZ Losses', 'startAmount' : 0 },
     'fiftyWins' : { 'display' : '50/50 Wins', 'startAmount' : 0 },
     'fiftyLosses' : { 'display' : '50/50 Losses', 'startAmount' : 0 },
-    'trinkets' : { 'display' : 'Trinkets', 'startAmount' : 0 }
+    'trinkets' : { 'display' : 'Trinkets', 'startAmount' : 0 },
+    'goon1' : { 'display' : 'Goon 1 Level', 'startAmount' : 0 },
+    'goon2' : { 'display' : 'Goon 2 Level', 'startAmount' : 0 },
+    'goon3' : { 'display' : 'Goon 3 Level', 'startAmount' : 0 },
+    'goon4' : { 'display' : 'Goon 4 Level', 'startAmount' : 0 },
+    'goon5' : { 'display' : 'Goon 5 Level', 'startAmount' : 0 },
+    'goon6' : { 'display' : 'Goon 6 Level', 'startAmount' : 0 }
 }
 
 
@@ -80,14 +86,14 @@ class Bank:
 
 
     #Updates the balance of a user and updates stats
-    def updateBalance(self, userId, amount):
+    def updateBalance(self, userId, amount, loan = True):
         id = str(userId)
         self.createNewUserStats(id)
 
         self.balances[id]['balance'] = self.balances[id]['balance'] + amount
         
         #Instead of making users do !loan, just give them 100
-        if self.balances[id]['balance'] == 0:
+        if self.balances[id]['balance'] == 0 and loan == True:
             self.balances[id]['balance'] = loanAmount
             self.updatePlayerStat(id, 'resets', 1)
 
@@ -160,3 +166,11 @@ class Bank:
             #If there were any changes, save the file immediately
             if changed:
                 self.saveBalances()
+
+
+    #Returns the players stats dict
+    def getPlayerStatDict(self, userId):
+        id = str(userId)
+        self.createNewUserStats(id)
+
+        return self.balances[id]
