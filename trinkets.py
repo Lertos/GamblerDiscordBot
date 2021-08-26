@@ -6,6 +6,7 @@ class Trinkets:
         self.bonusPerLevel = 0.0025
         self.costPerLevel = 500
         self.costMultiplier = 1.25
+        self.maxTrinketLevel = 60
 
 
     #Gets the trinket level given a user id
@@ -53,4 +54,9 @@ class Trinkets:
         formatted = list(map(lambda x: str(x[1]['trinkets']) + ' - ' + helper.getDisplayName(userId, members, x[0]), sortedTrinkets))
 
         return header + '\n'.join(formatted)
+
+
+    #Get the max level so players cannot go over
+    def getMaxTrinketLevel(self):
+        return self.maxTrinketLevel
 

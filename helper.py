@@ -3,7 +3,7 @@ from random import choice
 
 #Returns the amount back with proper formatting (such as commas)
 def moneyFormat(money):
-    return f'{money:,}' + '$'
+    return f'${int(money):,}'
 
 
 #Returns a formatted header for any list, given the main text

@@ -2,6 +2,7 @@ import json
 import helper
 
 balanceFile = 'balances.json'
+loanAmount = 100
 
 statSetupInfo = {
     'balance' : { 'display' : 'Current Balance', 'startAmount' : 100 },
@@ -58,6 +59,10 @@ class Bank:
         if id in self.balances:
             self.balances[id]['balance'] = self.balances[id]['balance'] + amount
             
+            #Instead of making users do !loan, just give them 100
+            if self.balances[id]['balance'] == 0:
+                self.balances[id]['balance'] = loanAmount
+
             self.updatePlayerTotalStats(id, amount)
             self.saveBalances()
 
@@ -109,6 +114,20 @@ class Bank:
             self.balances[id]['loans'] = self.balances[id]['loans'] + 1
 
         self.saveBalances()
+
+
+    #Give players a loan if they are at minimum cash
+    def giveUserLoan(self, userId):
+        id = str(userId)
+
+        #Check if the player has a zero balance
+        if self.balances[id]['balance'] == 0:
+            self.balances[id]['balance'] = loanAmount
+            self.saveBalances()
+            
+            return loanAmount
+        else:
+            return -1
 
 
     #If the user is new add them with the default starting amount

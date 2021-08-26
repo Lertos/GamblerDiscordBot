@@ -201,7 +201,7 @@ async def flipCoin(ctx, guess : str, amount : int):
 #===============================================
 #   ROLL
 #===============================================
-@bot.command(name='roll', aliases=["ro"], help='[1 - 6] [bet amount]', brief='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)', ignore_extra=True) 
+@bot.command(name='roll', aliases=["r","ro"], help='[1 - 6] [bet amount]', brief='[1-6] [bet amount] Rolls a dice (1/6 chance, 6 * payout)', ignore_extra=True) 
 async def rollDice(ctx, guess : int, amount : int):
     #Check to make sure the player supplied either a valid die side
     if guess < 1 or guess > 6:
@@ -353,6 +353,7 @@ async def fiftyRemove(ctx):
 #===============================================
 #   LOAN
 #===============================================
+''' OLD LOAN CODE
 @bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
 async def getLoan(ctx):
     userId = ctx.author.id
@@ -368,6 +369,22 @@ async def getLoan(ctx):
         botBank.updateBalance(userId, loanAmount)
         botBank.updateLoanStat(userId)
         await ctx.channel.send(name + ', you have been loaned: ' + str(helper.moneyFormat(loanAmount)))
+'''
+@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
+async def getLoan(ctx):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    #Check if the user has 0 balance - if so allow the loan
+    if botBank.balances[str(userId)]['balance'] == 0:
+        loanAmount = botBank.giveUserLoan(userId)
+
+        if loanAmount == -1:
+            await ctx.channel.send(name + ', you need to have a balance of 0$')
+        else:
+            await ctx.channel.send(name + ', you have been loaned: ' + str(helper.moneyFormat(loanAmount)))
+    else:
+        await ctx.channel.send(name + ', you need to have a balance of 0$')
 
 
 #===============================================
@@ -437,6 +454,11 @@ async def trinketNext(ctx):
     #Get the players current level
     level = botTrinkets.getTrinketLevel(userId, botBank.balances)
 
+    #Check to see if they are at the maximum amount of trinkets
+    if level == botTrinkets.getMaxTrinketLevel():
+        await ctx.channel.send(name + ', you already have the maximum amount of trinkets (' + str(level) + ')')
+        return
+
     if level == -1:
         await ctx.channel.send(name + ', you do not have a trinkets value. Contact an administrator')
 
@@ -467,6 +489,14 @@ async def trinketCheck(ctx):
 async def trinketBuy(ctx):
     userId = ctx.author.id
     name = str(ctx.author.display_name)
+
+    #Get the new level
+    level = botTrinkets.getTrinketLevel(userId, botBank.balances)
+
+    #Check to see if they are at the maximum amount of trinkets
+    if level == botTrinkets.getMaxTrinketLevel():
+        await ctx.channel.send(name + ', you already have the maximum amount of trinkets (' + str(level) + ')')
+        return
 
     #Get the price of the next trinket
     price = botTrinkets.getNextTrinketPrice(userId, botBank.balances)
