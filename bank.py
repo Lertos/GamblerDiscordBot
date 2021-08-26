@@ -9,6 +9,7 @@ statSetupInfo = {
     'totalWon' : { 'display' : 'Total Money Won', 'startAmount' : 0 },
     'totalLost' : { 'display' : 'Total Money Lost', 'startAmount' : 0 },
     'loans' : { 'display' : 'Loans Given', 'startAmount' : 0 },
+    'resets' : { 'display' : 'Times Balance Hit 0', 'startAmount' : 0 },
     'flipWins' : { 'display' : 'Coin Flip Wins', 'startAmount' : 0 },
     'flipLosses' : { 'display' : 'Coin Flip Losses', 'startAmount' : 0 },
     'rollWins' : { 'display' : 'Dice Roll Wins', 'startAmount' : 0 },
@@ -50,6 +51,9 @@ class Bank:
         #If there were any changes, save the file immediately
         if changed:
             self.saveBalances()
+
+
+    #Update player stat given the key and the 
 
 
     #Updates the balance of a user and updates stats
