@@ -93,9 +93,9 @@ class Bank:
         self.balances[id]['balance'] = self.balances[id]['balance'] + amount
         
         #Instead of making users do !loan, just give them 100
-        if self.balances[id]['balance'] == 0 and loan == True:
-            self.balances[id]['balance'] = loanAmount
-            self.updatePlayerStat(id, 'resets', 1)
+        #if self.balances[id]['balance'] == 0 and loan == True:
+        #    self.balances[id]['balance'] = loanAmount
+        #    self.updatePlayerStat(id, 'resets', 1)
 
         if amount > 0:
             self.balances[id]['totalWon'] = self.balances[id]['totalWon'] + amount
@@ -108,9 +108,9 @@ class Bank:
     #Updates stats of a user of a specific game type based on the outcome
     def updateModeStats(self, userId, gameType, outcome):
         if outcome == -1:
-            self.updatePlayerStat(userId, gameType + 'Wins', 1)
-        elif outcome == 1:
             self.updatePlayerStat(userId, gameType + 'Losses', 1)
+        elif outcome == 1:
+            self.updatePlayerStat(userId, gameType + 'Wins', 1)
 
 
     #Calculates the leaderboard based on balances

@@ -47,7 +47,7 @@ def getCardSuit(isWinner, guess):
 #Used to get a random card suit
 def getNumberEmojiFromInt(number):
     if number == 1:
-        return ':regional_indicator_a:'
+        return ':one:'
     elif number == 2:
         return ':two:'
     elif number == 3:
@@ -72,6 +72,8 @@ def getNumberEmojiFromInt(number):
         return ':regional_indicator_q:'
     elif number == 13:
         return ':regional_indicator_k:'
+    elif number == 14:
+        return ':regional_indicator_a:'
 
 
 #Find the users id in the members list and returns the display name 

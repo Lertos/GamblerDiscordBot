@@ -1,8 +1,8 @@
 import time
 import math
 
-loanAmount = 100
-secondsToWait = 600
+loanAmount = 1000
+secondsToWait = 300
 
 
 class Loaner:

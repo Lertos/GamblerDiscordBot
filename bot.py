@@ -195,7 +195,7 @@ async def flipCoin(ctx, guess : str, amount : int):
         await ctx.channel.send(':regional_indicator_' + choices[0] + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updateModeStats(userId, 'flip', 1)
-        await ctx.channel.send(':regional_indicator_' + guess + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+        await ctx.channel.send(':regional_indicator_' + guess + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
 
 
 #===============================================
@@ -218,7 +218,7 @@ async def rollDice(ctx, guess : int, amount : int):
         await ctx.channel.send(resultMsg)
         return
 
-    result = result = isWinner(userId, botBank.balances, 0.16666)
+    result = isWinner(userId, botBank.balances, 0.16666)
     
     payout = getPayoutResult(userId, amount, rollPayoutRate, result)
 
@@ -228,7 +228,7 @@ async def rollDice(ctx, guess : int, amount : int):
         await ctx.channel.send(helper.getRollNumberWord(False, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updateModeStats(userId, 'roll', 1)
-        await ctx.channel.send(helper.getRollNumberWord(True, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+        await ctx.channel.send(helper.getRollNumberWord(True, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
 
 
 #===============================================
@@ -268,7 +268,7 @@ async def chooseSuit(ctx, guess : str, amount : int):
     else:
         botBank.updateModeStats(userId, 'suit', 1)
         suit = helper.getCardSuit(True, guess)
-        await ctx.channel.send(helper.getNumberEmojiFromInt(randrange(1,14)) + ' of ' + suit + '  ' + name + ', you guessed ' + suit + ' and **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+        await ctx.channel.send(helper.getNumberEmojiFromInt(randrange(1,14)) + ' of ' + suit + '  ' + name + ', you guessed ' + suit + ' and **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
 
 
 #===============================================
@@ -302,7 +302,7 @@ async def chooseXYZ(ctx, amount : int):
         await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updateModeStats(userId, 'xyz', 1)
-        await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout))) + '** has been added to your balance')
+        await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
 
 
 #===============================================
@@ -412,10 +412,8 @@ async def fiftyRemove(ctx):
 #===============================================
 #   LOAN
 #===============================================
-@bot.command(name='loan', aliases=["lo"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
+@bot.command(name='loan', aliases=["l"], help=f'The bank will loan you every {loaner.secondsToWait} seconds', ignore_extra=True, case_insensitive=False) 
 async def getLoan(ctx):
-    return #Disable the command for now
-
     userId = ctx.author.id
     name = str(ctx.author.display_name)
 
@@ -427,7 +425,7 @@ async def getLoan(ctx):
         await ctx.channel.send(timeLeft)
     else:
         botBank.updateBalance(userId, loanAmount)
-        botBank.updateLoanStat(userId)
+        botBank.updatePlayerStat(userId, 'loans', 1)
         await ctx.channel.send(name + ', you have been loaned: ' + str(helper.moneyFormat(loanAmount)))
 
 
@@ -608,7 +606,7 @@ async def goonsNext(ctx):
         await ctx.channel.send(name + ', you have already purchased all available goons')
         return
 
-    await ctx.channel.send(name + ', the next goon (#' + str(goonNumber) + ') you can purchase will cost ' + str(helper.moneyFormat(price)))
+    await ctx.channel.send(name + ', the next Goon (#' + str(goonNumber) + ') you can purchase will cost ' + str(helper.moneyFormat(price)))
 
 
 #===============================================
@@ -640,7 +638,7 @@ async def goonsBuy(ctx):
     #Update the balance of the user
     botBank.updateBalance(userId, -price)
 
-    await ctx.channel.send(name + ', Goon ' + str(goonNumber) + ' will now start making cash for you on the side. The goon cost you ' + str(helper.moneyFormat(price)))
+    await ctx.channel.send(name + ', Goon ' + str(goonNumber) + ' will now start making cash for you on the side. The Goon cost you ' + str(helper.moneyFormat(price)))
 
 
 #===============================================
