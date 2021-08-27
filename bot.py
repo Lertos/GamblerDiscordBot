@@ -125,9 +125,12 @@ def isWinner(userId, balances, chanceToWin):
 
     #Get the players additional chance of winning
     bonus = botTrinkets.getBonusFromTrinkets(userId, balances)
+    
+    #Since games have different % chance to win - need to normalize it for the mode
+    normalizedBonus = bonus / chanceToWin
 
     #Check if the user scored above the chance of winning
-    if result <= (chanceToWin + bonus):
+    if result <= (chanceToWin + normalizedBonus):
         return True
     return False
 
@@ -585,9 +588,25 @@ async def trinketTop(ctx):
 #===============================================
 @bot.command(name='goonsClaim', aliases=["gc"], help='Claims all offline income from your goons', ignore_extra=True) 
 async def goonsClaim(ctx):
-    
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
 
-    await ctx.channel.send()
+    timeSinceClaimed = botGoons.getTimeSinceClaimed(userId)
+    claimedAmount = botGoons.claimGoonIncome(userId, botBank.balances)
+
+    #Check to see if the player has no Goons
+    if claimedAmount == -1 or timeSinceClaimed == -1:
+        await ctx.channel.send(name + ', you do not have any Goons under your command')
+        return
+
+    #Check to see if the Goons haven't made enough money to warrant any giveaway
+    if claimedAmount == 0:
+        await ctx.channel.send(name + ', your Goons have not made any money since you last checked')
+        return
+
+    formattedTime = helper.formatTime(timeSinceClaimed)
+
+    await ctx.channel.send(name + ', after ' + formattedTime + ', your goons have earned you a total of ' + str(helper.moneyFormat(claimedAmount)))
 
 
 #===============================================
@@ -648,9 +667,40 @@ async def goonsBuy(ctx):
 async def goonsInfo(ctx):
     userId = ctx.author.id
 
-    output = botGoons.getGoonLevels(userId, botBank.balances[str(userId)])
+    output = botGoons.getGoonLevelStats(botBank.balances[str(userId)])
 
     await ctx.channel.send(output)
+
+
+#===============================================
+#   GOONS UPGRADE CHECK
+#===============================================
+@bot.command(name='goonsUpgradeCheck', aliases=["guc"], help='[goon #]', brief='[goon #] - Shows upgrade cost of the specified goon', ignore_extra=True) 
+async def goonsUpgradeCheck(ctx, goonNumber : int):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    numOfGoons = len(goons.goonSetup)
+
+    #Validate the input parameter is correct
+    if(goonNumber <= 0 or goonNumber > numOfGoons):
+        await ctx.channel.send(name + ', you must supply a Goon number between 1 and ' + str(numOfGoons))
+        return
+
+    #Check to see if they even have the specified Goon purchased
+    nextGoon,price = botGoons.getNextAvailableGoon(userId, botBank.balances)
+
+    if goonNumber > nextGoon:
+        await ctx.channel.send(name + ', you do not have that Goon purchased yet. You are currently on Goon ' + str(nextGoon-1))
+        return 
+
+    price = botGoons.getGoonUpgradePrice(userId, botBank.balances, goonNumber)
+    
+    if price == -1:
+        await ctx.channel.send(name + ', that Goon is at the maximum level')
+        return 
+
+    await ctx.channel.send(name + ', to upgrade Goon ' + str(goonNumber) + ' it will cost ' + str(price))
 
 
 #===============================================
@@ -658,9 +708,43 @@ async def goonsInfo(ctx):
 #===============================================
 @bot.command(name='goonsUpgrade', aliases=["gu"], help='[goon #]', brief='[goon #] - Upgrades the specified goon', ignore_extra=True) 
 async def goonsUpgrade(ctx, goonNumber : int):
-    
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
 
-    await ctx.channel.send()
+    numOfGoons = len(goons.goonSetup)
+
+    #Validate the input parameter is correct
+    if(goonNumber <= 0 or goonNumber > numOfGoons):
+        await ctx.channel.send(name + ', you must supply a Goon number between 1 and ' + str(numOfGoons))
+        return
+
+    #Check to see if they even have the specified Goon purchased
+    nextGoon,price = botGoons.getNextAvailableGoon(userId, botBank.balances)
+
+    if goonNumber > nextGoon:
+        await ctx.channel.send(name + ', you do not have that Goon purchased yet. You are currently on Goon ' + str(nextGoon-1))
+        return 
+
+    price = botGoons.getGoonUpgradePrice(userId, botBank.balances, goonNumber)
+    
+    if price == -1:
+        await ctx.channel.send(name + ', that Goon is at the maximum level')
+        return 
+
+    #Checks for any errors of the input
+    resultMsg = validation(userId, price)
+
+    if resultMsg != '':
+        await ctx.channel.send(resultMsg)
+        return
+
+    #Increment the trinket level of the user
+    botGoons.incrementGoonAmount(userId, botBank.balances, goonNumber)
+
+    #Update the balance of the user
+    botBank.updateBalance(userId, -price)
+
+    await ctx.channel.send(name + ', you upgraded Goon ' + str(goonNumber) + ', costing ' + str(helper.moneyFormat(price)))
 
 
 #===============================================

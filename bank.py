@@ -92,10 +92,9 @@ class Bank:
 
         self.balances[id]['balance'] = self.balances[id]['balance'] + amount
         
-        #Instead of making users do !loan, just give them 100
-        #if self.balances[id]['balance'] == 0 and loan == True:
-        #    self.balances[id]['balance'] = loanAmount
-        #    self.updatePlayerStat(id, 'resets', 1)
+        if self.balances[id]['balance'] == 0 and loan == True:
+            #self.balances[id]['balance'] = loanAmount
+            self.updatePlayerStat(id, 'resets', 1)
 
         if amount > 0:
             self.balances[id]['totalWon'] = self.balances[id]['totalWon'] + amount

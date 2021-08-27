@@ -36,7 +36,7 @@ class Trinkets:
     def getNextTrinketPrice(self, userId, balances):
         level = self.getTrinketLevel(userId, balances)
         
-        return costPerLevel * (costMultiplier * (level + 1))
+        return round(costPerLevel * (costMultiplier * (level + 1)))
 
 
     #Increments the trinket value for the user

@@ -1,4 +1,5 @@
 import math
+import time
 from random import choice
 
 #Returns the amount back with proper formatting (such as commas)
@@ -84,3 +85,29 @@ def getDisplayName(userId, members, id):
                 return '**' + str(y) + '**'
             else:
                 return y
+
+
+#Returns the time in hours, minutes, seconds until a cooldown is done
+def checkTimeLeft(userId, dictToCheck, cooldownMsg):
+    id = str(userId)
+
+    #Check if the user is in the list
+    if id not in dictToCheck:
+        return cooldownMsg
+
+    #Get the total time in seconds and parse it
+    cooldownDone = dictToCheck[id]
+    totalTime = cooldownDone - round(time.time())
+    
+    return 'You can loan in ' + formatTime(totalTime)
+
+
+#Given time in seconds, returns the formatted time in hours/minutes/seconds
+def formatTime(timeInSeconds):
+    hours = math.floor(timeInSeconds / 3600)
+    totalTime = timeInSeconds - (hours * 3600)
+
+    minutes = math.floor(totalTime / 60)
+    totalTime = totalTime - (minutes * 60)
+
+    return f'{hours} hour(s), {minutes} minute(s), {totalTime} second(s)'

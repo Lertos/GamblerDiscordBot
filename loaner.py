@@ -1,5 +1,6 @@
 import time
 import math
+import helper
 
 loanAmount = 1000
 secondsToWait = 300
@@ -30,21 +31,5 @@ class Loaner:
 
 
     #Returns the time in hours, minutes, seconds until a loan is available
-    def checkTimeLeft(self, userId):
-        id = str(userId)
-
-        #Check if the user is in the list
-        if id not in self.loans:
-            return 'You do not have a cooldown and the loan is available'
-
-        #Get the total time in seconds and parse it
-        loanReady = self.loans[id]
-        totalTime = loanReady - round(time.time())
-
-        hours = math.floor(totalTime / 3600)
-        totalTime = totalTime - (hours * 3600)
-
-        minutes = math.floor(totalTime / 60)
-        totalTime = totalTime - (minutes * 60)
-
-        return f'You can loan in {hours} hour(s), {minutes} minute(s), {totalTime} second(s)'
+    def checkTimeLeftBeforeLoan(self, userId):
+        return helper.checkTimeLeft(userId, self.loans, 'You do not have a cooldown and the loan is available')
