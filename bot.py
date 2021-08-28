@@ -606,6 +606,9 @@ async def goonsClaim(ctx):
 
     formattedTime = helper.formatTime(timeSinceClaimed)
 
+    #Update the balance of the user
+    botBank.updateBalance(userId, claimedAmount, False)
+
     await ctx.channel.send(name + ', after ' + formattedTime + ', your goons have earned you a total of ' + str(helper.moneyFormat(claimedAmount)))
 
 
@@ -700,7 +703,7 @@ async def goonsUpgradeCheck(ctx, goonNumber : int):
         await ctx.channel.send(name + ', that Goon is at the maximum level')
         return 
 
-    await ctx.channel.send(name + ', to upgrade Goon ' + str(goonNumber) + ' it will cost ' + str(price))
+    await ctx.channel.send(name + ', to upgrade Goon ' + str(goonNumber) + ' it will cost ' + str(helper.moneyFormat(price)))
 
 
 #===============================================
@@ -819,6 +822,7 @@ async def modifyBalance(ctx, displayName : str, amount : int):
     else:
         botBank.updateBalance(userId, amount, False)
 
+    print(str(userId) + ' : ' + displayName.capitalize() + ' has been given ' + str(amount) + ' by the bank! How lucky!')
     await ctx.channel.send(displayName.capitalize() + ' has been given ' + str(amount) + ' by the bank! How lucky!')
 
 

@@ -83,10 +83,18 @@ class Goons:
     def getGoonLevelStats(self, player):
         goons = self.getGoonLevels(player)
         output = ''
+        totalPerHour = 0
 
         for i in goons:
-            output += '• Goon ' + str(i) + '   (CURRENT: Lvl. ' + str(goons[i]) + '  |  ' + helper.moneyFormat(str(round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * goons[i]))) + '/h)'
-            output += '   (NEXT: ' + helper.moneyFormat(str(round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * (goons[i]+1)))) + '/h)\n'
+            currentPerHour = round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * goons[i])
+            nextPerHour = round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * (goons[i]+1))
+            totalPerHour += currentPerHour
+
+            output += '• Goon ' + str(i) + '   (CURRENT: Lvl. ' + str(goons[i]) + '  |  ' + helper.moneyFormat(str(currentPerHour)) + '/h)'
+            output += '   (NEXT: ' + helper.moneyFormat(str(nextPerHour)) + '/h)\n'
+
+        output += '\nTOTAL PER HOUR: ' + helper.moneyFormat(str(totalPerHour))
+
         return output
 
 
@@ -163,7 +171,7 @@ class Goons:
         if currentGoonLevel == maxGoonLevel:
             return -1
 
-        return goonSetup[goon]['costPerLevel'] * (goonSetup[goon]['costMultiplier'] * (currentGoonLevel + 1))
+        return round(goonSetup[goon]['costPerLevel'] * (goonSetup[goon]['costMultiplier'] * (currentGoonLevel + 1)))
 
 
     #Increments the level of a specific goon
