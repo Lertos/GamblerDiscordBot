@@ -86,19 +86,19 @@ class Bank:
 
 
     #Updates the balance of a user and updates stats
-    def updateBalance(self, userId, amount, loan = True):
+    def updateBalance(self, userId, amount, updateTotal = True):
         id = str(userId)
         self.createNewUserStats(id)
 
         self.balances[id]['balance'] = self.balances[id]['balance'] + amount
         
-        if self.balances[id]['balance'] == 0 and loan == True:
+        if self.balances[id]['balance'] == 0:
             #self.balances[id]['balance'] = loanAmount
             self.updatePlayerStat(id, 'resets', 1)
 
-        if amount > 0:
+        if amount > 0 and updateTotal:
             self.balances[id]['totalWon'] = self.balances[id]['totalWon'] + amount
-        else:
+        elif amount < 0 and updateTotal:
             self.balances[id]['totalLost'] = self.balances[id]['totalLost'] + abs(amount)
 
         self.saveBalances()

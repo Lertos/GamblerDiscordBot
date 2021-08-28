@@ -336,7 +336,7 @@ async def fiftyCreate(ctx, amount : int):
         return
 
     #Take the money from the user
-    botBank.updateBalance(userId, -amount, False)
+    botBank.updateBalance(userId, -amount)
 
     await ctx.channel.send(name + ', you have created a 50/50 posting for ' + str(helper.moneyFormat(amount)))
 
@@ -424,10 +424,10 @@ async def getLoan(ctx):
     loanAmount = botLoaner.askForLoan(userId)
 
     if loanAmount < 0:
-        timeLeft = botLoaner.checkTimeLeft(userId)
+        timeLeft = botLoaner.checkTimeLeftBeforeLoan(userId)
         await ctx.channel.send(timeLeft)
     else:
-        botBank.updateBalance(userId, loanAmount)
+        botBank.updateBalance(userId, loanAmount, False)
         botBank.updatePlayerStat(userId, 'loans', 1)
         await ctx.channel.send(name + ', you have been loaned: ' + str(helper.moneyFormat(loanAmount)))
 
@@ -435,7 +435,7 @@ async def getLoan(ctx):
 #===============================================
 #   BALANCE
 #===============================================
-@bot.command(name='balance', aliases=["bal"], help='(optional: name) Shows the balance of yourself or another', ignore_extra=True) 
+@bot.command(name='balance', aliases=["bal","b"], help='(optional: name) Shows the balance of yourself or another', ignore_extra=True) 
 async def checkBalance(ctx, name = ''):
     userId = ctx.author.id
     outputText = 'Your balance is: '
@@ -560,7 +560,7 @@ async def trinketBuy(ctx):
     level = botTrinkets.getTrinketLevel(userId, botBank.balances)
 
     #Update the balance of the user
-    botBank.updateBalance(userId, -price)
+    botBank.updateBalance(userId, -price, False)
 
     await ctx.channel.send(name + ', you bought trinket ' + str(level) + ' for ' + str(helper.moneyFormat(price)))
 
@@ -655,7 +655,7 @@ async def goonsBuy(ctx):
     botGoons.incrementGoonAmount(userId, botBank.balances, goonNumber)
 
     #Update the balance of the user
-    botBank.updateBalance(userId, -price)
+    botBank.updateBalance(userId, -price, False)
 
     await ctx.channel.send(name + ', Goon ' + str(goonNumber) + ' will now start making cash for you on the side. The Goon cost you ' + str(helper.moneyFormat(price)))
 
@@ -742,7 +742,7 @@ async def goonsUpgrade(ctx, goonNumber : int):
     botGoons.incrementGoonAmount(userId, botBank.balances, goonNumber)
 
     #Update the balance of the user
-    botBank.updateBalance(userId, -price)
+    botBank.updateBalance(userId, -price, False)
 
     await ctx.channel.send(name + ', you upgraded Goon ' + str(goonNumber) + ', costing ' + str(helper.moneyFormat(price)))
 
@@ -817,7 +817,7 @@ async def modifyBalance(ctx, displayName : str, amount : int):
     if userId == -1:
         await ctx.author.send('No one in the discord has a display name that matches what you supplied to the add command')
     else:
-        botBank.updateBalance(userId, amount)
+        botBank.updateBalance(userId, amount, False)
 
     await ctx.channel.send(displayName.capitalize() + ' has been given ' + str(amount) + ' by the bank! How lucky!')
 

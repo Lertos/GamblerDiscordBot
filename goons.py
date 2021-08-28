@@ -85,8 +85,8 @@ class Goons:
         output = ''
 
         for i in goons:
-            output += '• Goon ' + str(i) + '   (CURRENT: Lvl. ' + str(goons[i]) + '  |  ' + helper.moneyFormat(str(round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * goons[i]))) + '/h)\n'
-
+            output += '• Goon ' + str(i) + '   (CURRENT: Lvl. ' + str(goons[i]) + '  |  ' + helper.moneyFormat(str(round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * goons[i]))) + '/h)'
+            output += '   (NEXT: ' + helper.moneyFormat(str(round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * (goons[i]+1)))) + '/h)\n'
         return output
 
 

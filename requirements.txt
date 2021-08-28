@@ -1,0 +1,6 @@
+os
+discord
+discord.flags
+random
+dotenv
+discord.ext
