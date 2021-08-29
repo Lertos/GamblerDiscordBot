@@ -150,13 +150,15 @@ class Goons:
 
         for i in range(1, numberOfGoons + 1):
             nextGoon = i
+            level = balances[id]['goon' + str(i)]
             
-            #If the level isnt zero, then we know we have the highest
-            if balances[id]['goon' + str(i)] == 0:
-                #If every goon has been purchased, return -1
-                if i == numberOfGoons:
-                    return (-1,-1)
+            #If the level is zero, then we know we have the highest
+            if level == 0:
                 break
+
+            #If every goon has been purchased, return -1
+            if i == numberOfGoons and level != 0:
+                return (-1,-1)
 
         return (nextGoon, goonSetup[nextGoon]['costToBuy'])
 

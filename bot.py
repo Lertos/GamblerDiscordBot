@@ -693,7 +693,7 @@ async def goonsUpgradeCheck(ctx, goonNumber : int):
     #Check to see if they even have the specified Goon purchased
     nextGoon,price = botGoons.getNextAvailableGoon(userId, botBank.balances)
 
-    if goonNumber > nextGoon:
+    if nextGoon != -1 and goonNumber > nextGoon:
         await ctx.channel.send(name + ', you do not have that Goon purchased yet. You are currently on Goon ' + str(nextGoon-1))
         return 
 
@@ -724,7 +724,7 @@ async def goonsUpgrade(ctx, goonNumber : int):
     #Check to see if they even have the specified Goon purchased
     nextGoon,price = botGoons.getNextAvailableGoon(userId, botBank.balances)
 
-    if goonNumber > nextGoon:
+    if nextGoon != -1 and goonNumber > nextGoon:
         await ctx.channel.send(name + ', you do not have that Goon purchased yet. You are currently on Goon ' + str(nextGoon-1))
         return 
 
