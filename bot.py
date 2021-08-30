@@ -6,8 +6,8 @@ import fifty
 import loaner
 import trinkets
 import goons
+import gameEmbed
 
-from discord.flags import Intents
 from random import randrange, choice, random
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -27,6 +27,7 @@ botLoaner = loaner.Loaner()
 botFifty = fifty.FiftyFifty()
 botTrinkets = trinkets.Trinkets()
 botGoons = goons.Goons()
+botGameEmbed = gameEmbed.GameEmbed()
 
 #Setup variables
 flipPayoutRate = 1
@@ -34,7 +35,8 @@ rollPayoutRate = 5
 suitPayoutRate = 3
 xyzPayoutRate = 2
 
-#===============================================
+
+#================
 #   ON READY
 #===============================================
 @bot.event
@@ -127,7 +129,7 @@ def isWinner(userId, balances, chanceToWin):
     bonus = botTrinkets.getBonusFromTrinkets(userId, balances)
     
     #Since games have different % chance to win - need to normalize it for the mode
-    normalizedBonus = bonus / chanceToWin
+    normalizedBonus = bonus * chanceToWin
 
     #Check if the user scored above the chance of winning
     if result <= (chanceToWin + normalizedBonus):
@@ -305,7 +307,7 @@ async def chooseXYZ(ctx, amount : int):
         await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updateModeStats(userId, 'xyz', 1)
-        await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
+        await ctx.channel.send(':regional_indicator_' + str(guess) + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
 
 
 #===============================================
@@ -510,7 +512,7 @@ async def trinketNext(ctx):
     #Get the price of the next level trinket
     price = botTrinkets.getNextTrinketPrice(userId, botBank.balances)
 
-    await ctx.channel.send(name + ', you have ' + str(level) + ' trinkets. The next one costs ' + str(helper.moneyFormat(price)))
+    await ctx.channel.send(name + ', you have ' + str(level) + ' trinkets. The next one costs ' + str(helper.moneyFormat(round(price))))
 
 
 #===============================================
@@ -524,7 +526,7 @@ async def trinketCheck(ctx):
     #Get the bonus based on the current level
     bonus = botTrinkets.getBonusFromTrinkets(userId, botBank.balances)
 
-    await ctx.channel.send(name + ', you have an additional ' + str(100 * bonus) + '% chance to win in games against the House')
+    await ctx.channel.send(name + ', you have an additional ' + str(round(100 * bonus)) + '% chance to win in games against the House')
 
 
 #===============================================
@@ -690,7 +692,13 @@ async def goonsUpgradeCheck(ctx, goonNumber : int):
         await ctx.channel.send(name + ', you must supply a Goon number between 1 and ' + str(numOfGoons))
         return
 
+    goonLevels = botGoons.getGoonLevels(botBank.balances[str(userId)])
+
     #Check to see if they even have the specified Goon purchased
+    if goonLevels[goonNumber] == 0:
+        await ctx.channel.send(name + ', you do not have that Goon purchased yet')
+        return
+
     nextGoon,price = botGoons.getNextAvailableGoon(userId, botBank.balances)
 
     if nextGoon != -1 and goonNumber > nextGoon:
@@ -721,7 +729,13 @@ async def goonsUpgrade(ctx, goonNumber : int):
         await ctx.channel.send(name + ', you must supply a Goon number between 1 and ' + str(numOfGoons))
         return
 
+    goonLevels = botGoons.getGoonLevels(botBank.balances[str(userId)])
+
     #Check to see if they even have the specified Goon purchased
+    if goonLevels[goonNumber] == 0:
+        await ctx.channel.send(name + ', you do not have that Goon purchased yet')
+        return
+
     nextGoon,price = botGoons.getNextAvailableGoon(userId, botBank.balances)
 
     if nextGoon != -1 and goonNumber > nextGoon:
@@ -786,12 +800,15 @@ async def ranking(ctx):
     await ctx.channel.send(message)
 
 
+
 #===============================================
 #
 #   ADMIN COMMANDS - When a new one is added, 
 #                    add it to the list below
 #
 #===============================================
+
+
 
 #===============================================
 #   ADMIN
@@ -840,6 +857,86 @@ async def resetPlayerStats(ctx, displayName : str):
         botBank.resetPlayerStats(userId)
 
     await ctx.channel.send(displayName.capitalize() + ' has had their stats reset')
+
+
+
+#===============================================
+#
+#   GAMES EMBED COMMANDS 
+#   - Adds an embed and allows players to join games
+#       by reacting to the emojis on the embed
+#
+#===============================================
+
+
+
+#===============================================
+#   GAMES
+#===============================================
+@bot.command(name='games', help='Creates the embed and adds the initial reactions',  ignore_extra=True) 
+async def showGameEmbed(ctx):
+    embed = discord.Embed(color=0x00ff00)
+    embed.add_field(name='GAME LIST', value='\n:one: Game 1\n:two: Game 2\n:three: Game 3', inline=True)
+
+    messageId = botGameEmbed.getGameMessageId()
+
+    #Check if a games message already exists and if so delete it
+    if messageId != -1:
+        messageToDelete = await ctx.channel.fetch_message(messageId)
+        await messageToDelete.delete()
+
+    #Delete the command message
+    await ctx.message.delete()
+
+    message = await ctx.channel.send(embed=embed)
+    botGameEmbed.setGameMessageId(message.id)
+
+
+@bot.command(name='gameAdd', help='[emoji] [game name] Adds the given emoji/game line',  ignore_extra=True) 
+async def addGameToGameEmbed(ctx, emoji : str, gameName : str):
+    messageId = botGameEmbed.getGameMessageId()
+    message = await ctx.channel.fetch_message(messageId)
+
+    #Delete the command message
+    await ctx.message.delete()
+
+    #Add the given emoji to game relationship
+    await message.add_reaction(emoji = emoji)
+
+    botGameEmbed.addEmojisInUse(emoji)
+    
+
+@bot.event
+async def on_reaction_add(reaction, member):
+    emoji = reaction.emoji
+    message = reaction.message
+
+    messageId = botGameEmbed.getGameMessageId()
+
+
+    #TODO - need to get list of members and check if they already reacted. Think of if the bot goes off, u cant re-add the reactions
+
+
+    #If the bot reacts or the "games" message isnt setup yet return
+    if member.bot or messageId == -1:
+        return
+
+    #If the reaction was on a message other than the "games" message ignore it
+    if message.id != messageId:
+        return
+
+    #If the emoji reacted with is not part of the games list options remove it
+    if emoji not in botGameEmbed.getEmojisInUse():
+        await message.clear_reaction(emoji)
+
+    #How to remove a reaction completely from a message
+    #await message.remove_reaction(emoji, member)
+
+
+@addGameToGameEmbed.error
+async def gameAddError(ctx, error):
+    if isinstance(error, commands.CommandInvokeError):
+        await ctx.channel.send('The given Emoji does not exist')
 
 
 #Start the bot

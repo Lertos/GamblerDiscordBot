@@ -4,7 +4,7 @@ import time
 import math
 
 goonsFile = 'goons.json'
-maxGoonLevel = 50
+maxGoonLevel = 100
 
 goonSetup = {
     1 : {
@@ -17,35 +17,35 @@ goonSetup = {
     2 : {
         'costToBuy' : 2500,
         'costPerLevel' : 250,
-        'costMultiplier' : 2.2,
+        'costMultiplier' : 2.4,
         'moneyPerHourPerLevel' : 40,
         'moneyMultiplier' : 3.3
     },
     3 : {
         'costToBuy' : 6000,
         'costPerLevel' : 500,
-        'costMultiplier' : 1.9,
+        'costMultiplier' : 2.3,
         'moneyPerHourPerLevel' : 75,
         'moneyMultiplier' : 3.8
     },
     4 : {
         'costToBuy' : 15000,
         'costPerLevel' : 750,
-        'costMultiplier' : 1.6,
+        'costMultiplier' : 2.2,
         'moneyPerHourPerLevel' : 120,
         'moneyMultiplier' : 4.5
     },
     5 : {
         'costToBuy' : 40000,
         'costPerLevel' : 1000,
-        'costMultiplier' : 1.3,
+        'costMultiplier' : 2.1,
         'moneyPerHourPerLevel' : 150,
         'moneyMultiplier' : 5.5
     },
     6 : {
         'costToBuy' : 100000,
         'costPerLevel' : 1250,
-        'costMultiplier' : 1.1,
+        'costMultiplier' : 2.0,
         'moneyPerHourPerLevel' : 240,
         'moneyMultiplier' : 6.8
     }
