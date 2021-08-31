@@ -307,7 +307,7 @@ async def chooseXYZ(ctx, amount : int):
         await ctx.channel.send(':regional_indicator_' + choice(choices) + ':  ' + name + ', you **LOST**... **' + str(helper.moneyFormat(abs(payout))) + '** has been removed from your balance')
     else:
         botBank.updateModeStats(userId, 'xyz', 1)
-        await ctx.channel.send(':regional_indicator_' + str(guess) + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
+        await ctx.channel.send(':regional_indicator_' + str(guess).lower() + ':  ' + name + ', you **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
 
 
 #===============================================
@@ -873,11 +873,9 @@ async def resetPlayerStats(ctx, displayName : str):
 #===============================================
 #   GAMES
 #===============================================
-@bot.command(name='games', help='Creates the embed and adds the initial reactions',  ignore_extra=True) 
+@bot.command(name='games', help='Creates the embed and adds the initial reactions',  hidden=True, ignore_extra=True) 
+@commands.has_permissions(administrator=True)
 async def showGameEmbed(ctx):
-    embed = discord.Embed(color=0x00ff00)
-    embed.add_field(name='GAME LIST', value='\n:one: Game 1\n:two: Game 2\n:three: Game 3', inline=True)
-
     messageId = botGameEmbed.getGameMessageId()
 
     #Check if a games message already exists and if so delete it
@@ -888,22 +886,51 @@ async def showGameEmbed(ctx):
     #Delete the command message
     await ctx.message.delete()
 
-    message = await ctx.channel.send(embed=embed)
+    message = await ctx.channel.send(embed = getGameEmbed())
     botGameEmbed.setGameMessageId(message.id)
 
+    #Add all of the emojis as reactions to the message
+    for emoji in botGameEmbed.getEmojisInUse():
+        await message.add_reaction(emoji = emoji)
 
-@bot.command(name='gameAdd', help='[emoji] [game name] Adds the given emoji/game line',  ignore_extra=True) 
+
+@bot.command(name='gameAdd', help='[emoji] [game name] Adds the given emoji/game line',  hidden=True, ignore_extra=True) 
+@commands.has_permissions(administrator=True)
 async def addGameToGameEmbed(ctx, emoji : str, gameName : str):
     messageId = botGameEmbed.getGameMessageId()
-    message = await ctx.channel.fetch_message(messageId)
 
     #Delete the command message
     await ctx.message.delete()
 
-    #Add the given emoji to game relationship
-    await message.add_reaction(emoji = emoji)
+    #Add the game to the list
+    botGameEmbed.addGame(gameName, emoji)
 
-    botGameEmbed.addEmojisInUse(emoji)
+    #Add the new emoji as a reaction to the message - if exists
+    if messageId != -1:
+        message = await ctx.channel.fetch_message(messageId)
+        await message.edit(embed = getGameEmbed())
+        await message.add_reaction(emoji = emoji)
+
+
+@bot.command(name='gameRemove', help='[game name] Removes the Adds the given emoji/game line', hidden=True, ignore_extra=True) 
+@commands.has_permissions(administrator=True)
+async def removeGameFromGameEmbed(ctx, gameName : str):
+    messageId = botGameEmbed.getGameMessageId()
+
+    #Delete the command message
+    await ctx.message.delete()
+
+    #Get the emoji used by the game
+    emoji = botGameEmbed.getEmojiGivenName(gameName)
+
+    #Remove the game from the list
+    botGameEmbed.removeGameByName(gameName)
+
+    #Remove the emoji as a reaction to the message - if exists
+    if messageId != -1 and emoji != -1:
+        message = await ctx.channel.fetch_message(messageId)
+        await message.edit(embed = getGameEmbed())
+        await message.clear_reaction(emoji)
     
 
 @bot.event
@@ -912,10 +939,6 @@ async def on_reaction_add(reaction, member):
     message = reaction.message
 
     messageId = botGameEmbed.getGameMessageId()
-
-
-    #TODO - need to get list of members and check if they already reacted. Think of if the bot goes off, u cant re-add the reactions
-
 
     #If the bot reacts or the "games" message isnt setup yet return
     if member.bot or messageId == -1:
@@ -929,14 +952,47 @@ async def on_reaction_add(reaction, member):
     if emoji not in botGameEmbed.getEmojisInUse():
         await message.clear_reaction(emoji)
 
+    userId = member.id
+    displayName = str(member.display_name)
+
+    botGameEmbed.addPlayerToGame(emoji, userId, displayName)
+
+    await message.edit(embed = getGameEmbed())
+
     #How to remove a reaction completely from a message
     #await message.remove_reaction(emoji, member)
 
 
-@addGameToGameEmbed.error
-async def gameAddError(ctx, error):
-    if isinstance(error, commands.CommandInvokeError):
-        await ctx.channel.send('The given Emoji does not exist')
+@bot.event
+async def on_reaction_remove(reaction, member):
+    emoji = reaction.emoji
+    message = reaction.message
+
+    messageId = botGameEmbed.getGameMessageId()
+
+    #If the bot reacts or the "games" message isnt setup yet return
+    if member.bot or messageId == -1:
+        return
+
+    #If the reaction was on a message other than the "games" message ignore it
+    if message.id != messageId:
+        return
+
+    userId = member.id
+
+    botGameEmbed.removePlayerFromGame(emoji, userId)
+
+    await message.edit(embed = getGameEmbed())
+
+    #Remove the players reaction from the message
+    await message.remove_reaction(emoji, member)
+
+
+def getGameEmbed():
+    embed = discord.Embed(color=0x42413e)
+    embed.add_field(name=':raised_hands: The squad awaits you! :raised_hands: Join up! :fist:', value=botGameEmbed.getEmbedMessage(), inline=True)
+
+    return embed
 
 
 #Start the bot

@@ -1,21 +1,154 @@
+import json
+
+gameListFile = 'gameEmbed.json'
 
 
 class GameEmbed:
     def __init__(self):
-        self.emojisInUse = []
+        self.addedGames = []
+        self.loadAddedGames()
+
         self.gamesMessageId = -1
 
 
+    #Reads the json file containing all added games
+    def loadAddedGames(self):
+        with open(gameListFile) as f:
+            games = json.load(f)
+
+            for i in range(0, len(games)):
+                index = str(i)
+                game = games[index]['game']
+                emoji = games[index]['emoji']
+                members = games[index]['members']
+            
+                self.addedGames.append((game, emoji, members))
+
+
+    #Saves the json file with the updated game list
+    def saveAddedGames(self):
+        games = {}
+
+        for i in range(0, len(self.addedGames)):
+            game,emoji,members = self.addedGames[i]
+
+            games[i] = {}
+            games[i]['game'] = game
+            games[i]['emoji'] = emoji
+            games[i]['members'] = []
+            
+            if len(members) != 0:
+                for j in range(0, len(members)):
+                    games[i]['members'].append(members[j])
+
+        with open(gameListFile,'w') as f:
+            f.write(json.dumps(games))
+
+
+    def getEmbedMessage(self):
+        output = ''
+
+        for i in range(0, len(self.addedGames)):
+            output += str(self.addedGames[i][1]) + ' : ' + self.addedGames[i][0]
+            memberList = '  - [ '
+
+            for j in range(0, len(self.addedGames[i][2])):
+                memberList += str(self.addedGames[i][2][j][1]) + ', '
+            
+            #Remove ending comma
+            if memberList != '  - [ ':
+                memberList = memberList[0:-2] + ' ]\n'
+            else:
+                memberList = '\n'
+            output += memberList
+
+        return output
+
+
+    def getAddedGames(self):
+        return self.addedGames
+
+
+    def addGame(self, name, emoji):
+        self.addedGames.append((name, emoji, []))
+        self.saveAddedGames()
+
+
+    #Removes the tuple of the game specified by the given name
+    def removeGameByName(self, name):
+        index = self.getIndexByGameName(name)
+        
+        if index != -1:
+            self.addedGames.pop(index)
+            self.saveAddedGames()
+
+
     def getEmojisInUse(self):
-        return self.emojisInUse
+        emojis = []
+
+        for i in range(0, len(self.addedGames)):
+            emojis.append(self.addedGames[i][1])
+
+        return emojis
 
 
-    def addEmojisInUse(self, emoji):
-        self.emojisInUse.append(emoji)
+    def getEmojiGivenName(self, name):
+        for i in range(0, len(self.addedGames)):
+            if self.addedGames[i][0].lower() == name.lower():
+                return self.addedGames[i][1]
+        return -1
+            
+
+    #Returns the index of the game given a name
+    def getIndexByGameName(self, name):
+        for i in range(0, len(self.addedGames)):
+            gameName = self.addedGames[i][0]
+
+            if gameName.lower() == name.lower():
+                return i
+        #No game was found with the given name
+        return -1
 
 
-    def removeEmojisInUse(self, emoji):
-        self.emojisInUse.remove(emoji)
+    #Returns the index of the game given an emoji
+    def getIndexByEmojiName(self, emoji):
+        for i in range(0, len(self.addedGames)):
+            emojiName = self.addedGames[i][1]
+
+            if emojiName == emoji:
+                return i
+        #No game was found with the given emoji
+        return -1
+
+
+    #Adds a player to the list of members for a game, given an emoji
+    def addPlayerToGame(self, emoji, userId, displayName):
+        index = self.getIndexByEmojiName(emoji)
+        
+        if index != -1:
+            id = str(userId)
+            members = self.addedGames[index][2]
+
+            for i in range(0, len(members)):
+                if id == members[i][0]:
+                    return
+            
+            self.addedGames[index][2].append((id, displayName))
+            self.saveAddedGames()
+
+
+    #Adds a player to the list of members for a game, given an emoji
+    def removePlayerFromGame(self, emoji, userId):
+        index = self.getIndexByEmojiName(emoji)
+        
+        if index != -1:
+            id = str(userId)
+            members = self.addedGames[index][2]
+
+            for i in range(0, len(members)):
+                if id == members[i][0]:
+                    self.addedGames[index][2].pop(i)
+                    self.saveAddedGames()
 
 
     def getGameMessageId(self):
