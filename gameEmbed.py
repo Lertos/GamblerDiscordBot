@@ -1,6 +1,7 @@
 import json
 
 gameListFile = 'gameEmbed.json'
+emptySlotChar = '?'
 
 
 class GameEmbed:
@@ -69,8 +70,12 @@ class GameEmbed:
         return self.addedGames
 
 
-    def addGame(self, name, emoji):
-        self.addedGames.append((name, emoji, []))
+    def addGame(self, name, emoji, slots):
+        members = []
+        for i in range(0,slots):
+            members.append((emptySlotChar, emptySlotChar))
+
+        self.addedGames.append((name, emoji, members))
         self.saveAddedGames()
 
 
@@ -129,12 +134,17 @@ class GameEmbed:
             id = str(userId)
             members = self.addedGames[index][2]
 
+            #If the user already exists just return
             for i in range(0, len(members)):
                 if id == members[i][0]:
                     return
             
-            self.addedGames[index][2].append((id, displayName))
-            self.saveAddedGames()
+            #Check for an available slot and then replace it with the new player
+            for i in range(0, len(members)):
+                if members[i][0] == emptySlotChar:
+                    self.addedGames[index][2][i] = (id, displayName)
+                    self.saveAddedGames()
+                    return
 
 
     #Adds a player to the list of members for a game, given an emoji
@@ -147,8 +157,9 @@ class GameEmbed:
 
             for i in range(0, len(members)):
                 if id == members[i][0]:
-                    self.addedGames[index][2].pop(i)
+                    self.addedGames[index][2][i] = (emptySlotChar, emptySlotChar)
                     self.saveAddedGames()
+                    return
 
 
     def getGameMessageId(self):

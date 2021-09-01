@@ -894,16 +894,16 @@ async def showGameEmbed(ctx):
         await message.add_reaction(emoji = emoji)
 
 
-@bot.command(name='gameAdd', help='[emoji] [game name] Adds the given emoji/game line',  hidden=True, ignore_extra=True) 
+@bot.command(name='gameAdd', help='[emoji] [game name] [slots] Adds the given emoji/game line',  hidden=True, ignore_extra=True) 
 @commands.has_permissions(administrator=True)
-async def addGameToGameEmbed(ctx, emoji : str, gameName : str):
+async def addGameToGameEmbed(ctx, emoji : str, gameName : str, slots : int):
     messageId = botGameEmbed.getGameMessageId()
 
     #Delete the command message
     await ctx.message.delete()
 
     #Add the game to the list
-    botGameEmbed.addGame(gameName, emoji)
+    botGameEmbed.addGame(gameName, emoji, slots)
 
     #Add the new emoji as a reaction to the message - if exists
     if messageId != -1:
