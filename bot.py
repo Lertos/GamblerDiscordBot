@@ -941,8 +941,44 @@ async def on_reaction_add(reaction, member):
     messageId = botGameEmbed.getGameMessageId()
 
     #If the bot reacts or the "games" message isnt setup yet return
-    if member.bot or messageId == -1:
+    if member.bot or (messageId == -1 and emoji not in ('🇭', '🇹')):
         return
+
+    #Check if the reaction was a "heads" or "tails" emoji
+    if emoji in ('🇭', '🇹'):
+        #Check if it was on a flip box message
+        if message.id in botBank.getFlipBoxMessageIds():
+            msgId,userId,name,amount,results = botBank.getFlipBoxMessage(message.id)
+
+            #Check if it wasn't the person who created it
+            if str(userId) != str(member.id):
+                await message.remove_reaction(emoji, member)
+                return
+
+            #Checks for any errors of the input
+            resultMsg = validation(userId, amount)
+
+            if resultMsg != '':
+                await message.remove_reaction(emoji, member)
+                await member.channel.send(resultMsg)
+                return
+
+            result = isWinner(userId, botBank.balances, 0.5)
+            payout = getPayoutResult(userId, amount, flipPayoutRate, result)
+
+            #Send the user the message of the payout and whether they won
+            if payout < 0:
+                botBank.updateModeStats(userId, 'flip', -1)
+                botBank.addFlipBoxResult(message.id, -1)
+            else:
+                botBank.updateModeStats(userId, 'flip', 1)
+                botBank.addFlipBoxResult(message.id, 1)
+                
+            embed = getFlipBoxEmbed(message.id, member.id, '', '', [])
+            await message.edit(embed = embed)
+            await message.remove_reaction(emoji, member)
+            return
+
 
     #If the reaction was on a message other than the "games" message ignore it
     if message.id != messageId:
@@ -994,6 +1030,38 @@ def getGameEmbed():
 
     return embed
 
+
+
+@bot.command(name='flipBox', aliases=['fb'], help='s', ignore_extra=True) 
+async def createFlipBox(ctx, amount : int):
+    userId = ctx.author.id
+    name = str(ctx.author.display_name)
+
+    if amount <= 0:
+        await ctx.channel.send(name + ', provide a value greater than zero')
+
+    if amount >= 10000000:
+        await ctx.channel.send(name + ', provide a value smaller than 10 million')
+
+    embed = getFlipBoxEmbed(-1, userId, name, amount, [])
+    
+    message = await ctx.channel.send(embed = embed)
+
+    await message.add_reaction(emoji = '🇭')
+    await message.add_reaction(emoji = '🇹')
+
+    botBank.addFlipBoxMessage(message.id, userId, name, amount)
+
+
+def getFlipBoxEmbed(messageId, userId, name, amount, results):
+    if messageId != -1:
+        msgId,userId,name,amount,results = botBank.getFlipBoxMessage(messageId)
+
+    embed = discord.Embed()
+    embed.add_field(name = name + '\'s Flip Box (  BET:  ' + str(helper.moneyFormat(amount)) + '  )', value= ":regional_indicator_h: : Heads\n:regional_indicator_t: : Tails\n" + ' '.join(results), inline = False)
+    embed.add_field(name = name + '\'s Current Balance:', value= str(helper.moneyFormat(botBank.balances[str(userId)]['balance'])), inline = False)
+    
+    return embed
 
 #Start the bot
 bot.run(TOKEN)

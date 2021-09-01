@@ -50,7 +50,7 @@ class GameEmbed:
         output = ''
 
         for i in range(0, len(self.addedGames)):
-            output += str(self.addedGames[i][1]) + ' : ' + self.addedGames[i][0]
+            output += str(self.addedGames[i][1]) + ' : **' + self.addedGames[i][0] + '**'
             memberList = '  - [ '
 
             for j in range(0, len(self.addedGames[i][2])):

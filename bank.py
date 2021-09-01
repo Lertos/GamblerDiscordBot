@@ -32,6 +32,7 @@ statSetupInfo = {
 
 class Bank:   
     def __init__(self):
+        self.flipBoxMessages = []
         self.balances = self.loadBankBalances(balanceFile)
         self.addNewKeys()
 
@@ -173,3 +174,31 @@ class Bank:
         self.createNewUserStats(id)
 
         return self.balances[id]
+
+
+    def getFlipBoxMessages(self):
+        return self.flipBoxMessages
+
+    
+    def getFlipBoxMessageIds(self):
+        return [tup[0] for tup in self.flipBoxMessages]
+
+
+    def getFlipBoxMessage(self, messageId):
+        for i in range(0, len(self.flipBoxMessages)):
+            if self.flipBoxMessages[i][0] == messageId:
+                return self.flipBoxMessages[i]
+
+
+    def addFlipBoxMessage(self, messageId, userId, name, amount):
+        self.flipBoxMessages.append((messageId, str(userId), name, amount, []))
+
+
+    def addFlipBoxResult(self, messageId, result):
+        for i in range(0, len(self.flipBoxMessages)):
+            if self.flipBoxMessages[i][0] == messageId:
+                if result < 0:
+                    self.flipBoxMessages[i][4].append(':red_circle:')
+                else:
+                    self.flipBoxMessages[i][4].append(':green_circle:')
+                return
