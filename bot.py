@@ -122,17 +122,17 @@ async def getUserFromId(ctx, userId):
 #===============================================
 #   Randomly generates a number and checks the win condition
 #===============================================
-def isWinner(userId, balances, chanceToWin):
+def isWinner(userId, balances, chanceToWin, streakBonus = 0):
     result = random()
 
     #Get the players additional chance of winning
     bonus = botTrinkets.getBonusFromTrinkets(userId, balances)
-    
+
     #Since games have different % chance to win - need to normalize it for the mode
     normalizedBonus = bonus * chanceToWin
 
     #Check if the user scored above the chance of winning
-    if result <= (chanceToWin + normalizedBonus):
+    if result <= (chanceToWin + normalizedBonus + streakBonus):
         return True
     return False
 
@@ -187,12 +187,30 @@ async def flipCoin(ctx, guess : str, amount : int):
         await ctx.channel.send(resultMsg)
         return
 
-    result = isWinner(userId, botBank.balances, 0.5)
+    #Make flips more 50/50 by adding a streak bonus to prevent many losses/wins in a row
+    streakBonus, streakType = botBank.getStreakBonus(userId)
+
+    #Create a new streak if user doesnt have one
+    if streakType == -1:
+        streakBonus = 0
+
+    result = isWinner(userId, botBank.balances, 0.5, streakBonus)
 
     if result == False:
         choices.remove(guess)
 
     payout = getPayoutResult(userId, amount, flipPayoutRate, result)
+
+    #Create a new streak if user doesnt have one
+    if streakType == -1:
+        botBank.startStreakBonus(userId, payout)
+
+    #If they do have a streak and the result was the same as the streak outcome, increase it
+    else:
+        if (streakType < 0 and payout < 0) or (streakType > 0 and payout > 0):
+            botBank.increaseStreakBonus(userId)
+        else:
+            botBank.resetStreakBonus(userId)
 
     #Send the user the message of the payout and whether they won
     if payout < 0:
@@ -236,6 +254,7 @@ async def rollDice(ctx, guess : int, amount : int):
         await ctx.channel.send(helper.getRollNumberWord(True, guess) + '  ' + name + ', you guessed ' + str(guess) + ' and **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
 
 
+'''
 #===============================================
 #   SUIT
 #===============================================
@@ -274,6 +293,7 @@ async def chooseSuit(ctx, guess : str, amount : int):
         botBank.updateModeStats(userId, 'suit', 1)
         suit = helper.getCardSuit(True, guess)
         await ctx.channel.send(helper.getNumberEmojiFromInt(randrange(1,14)) + ' of ' + suit + '  ' + name + ', you guessed ' + suit + ' and **WON**! **' + str(helper.moneyFormat(abs(payout + amount))) + '** has been added to your balance')
+'''
 
 
 #===============================================
@@ -476,8 +496,14 @@ async def checkStats(ctx, name = ''):
     else:
         displayName = ctx.author.display_name
 
+    displayList, valueList = botBank.getPlayerStats(userId)
+
+    embed = discord.Embed(title=displayName + '\'s Stat Page')
+    embed.add_field(name = '\u200b', value = '\n'.join(displayList), inline = True)
+    embed.add_field(name = '\u200b', value = '\n'.join(valueList), inline = True)
+
     #Get the stats of the player with the specified id
-    await ctx.channel.send(botBank.getPlayerStats(userId, displayName))
+    await ctx.channel.send(embed = embed)
 
 
 #===============================================
@@ -485,9 +511,14 @@ async def checkStats(ctx, name = ''):
 #===============================================
 @bot.command(name='globalStats', aliases=["gs"], help='Shows the stats of everyone in the channel', ignore_extra=True) 
 async def checkGlobalStats(ctx):
-    
+    displayList, valueList = botBank.getGlobalStats()
+
+    embed = discord.Embed(title='Global Stat Page')
+    embed.add_field(name = '\u200b', value = '\n'.join(displayList), inline = True)
+    embed.add_field(name = '\u200b', value = '\n'.join(valueList), inline = True)
+
     #Get the stats of everyone in the channel
-    await ctx.channel.send(botBank.getGlobalStats())
+    await ctx.channel.send(embed = embed)
 
 
 #===============================================
@@ -563,6 +594,7 @@ async def trinketBuy(ctx):
 
     #Update the balance of the user
     botBank.updateBalance(userId, -price, False)
+    botBank.updatePlayerStat(userId, 'totalTrinkets', price)
 
     await ctx.channel.send(name + ', you bought trinket ' + str(level) + ' for ' + str(helper.moneyFormat(price)))
 
@@ -610,6 +642,7 @@ async def goonsClaim(ctx):
 
     #Update the balance of the user
     botBank.updateBalance(userId, claimedAmount, False)
+    botBank.updatePlayerStat(userId, 'totalClaimed', claimedAmount)
 
     await ctx.channel.send(name + ', after ' + formattedTime + ', your goons have earned you a total of ' + str(helper.moneyFormat(claimedAmount)))
 
@@ -671,12 +704,21 @@ async def goonsBuy(ctx):
 @bot.command(name='goonsInfo', aliases=["gi"], help='Shows all goon info and upgrade costs') 
 async def goonsInfo(ctx):
     userId = ctx.author.id
+    name = str(ctx.author.display_name)
 
-    output = botGoons.getGoonLevelStats(botBank.balances[str(userId)])
+    #output = botGoons.getGoonLevelStats(botBank.balances[str(userId)])
+    outCurrent, outNext, outCost, totalPerHour = botGoons.getGoonStats(botBank.balances[str(userId)])
 
-    await ctx.channel.send(output)
+    embed = discord.Embed(title=name + '\'s Goons')
+    embed.add_field(name = 'Current Stats', value = '\n'.join(outCurrent), inline = True)
+    embed.add_field(name = 'Next Level', value = '\n'.join(outNext), inline = True)
+    embed.add_field(name = 'Upgrade Cost', value = '\n'.join(outCost), inline = True)
+    embed.add_field(name = 'Total Per Hour', value = totalPerHour, inline = False)
+    
 
+    await ctx.channel.send(embed = embed)
 
+'''
 #===============================================
 #   GOONS UPGRADE CHECK
 #===============================================
@@ -712,6 +754,7 @@ async def goonsUpgradeCheck(ctx, goonNumber : int):
         return 
 
     await ctx.channel.send(name + ', to upgrade Goon ' + str(goonNumber) + ' it will cost ' + str(helper.moneyFormat(price)))
+'''
 
 
 #===============================================
@@ -760,6 +803,7 @@ async def goonsUpgrade(ctx, goonNumber : int):
 
     #Update the balance of the user
     botBank.updateBalance(userId, -price, False)
+    botBank.updatePlayerStat(userId, 'totalUpgrades', price)
 
     await ctx.channel.send(name + ', you upgraded Goon ' + str(goonNumber) + ', costing ' + str(helper.moneyFormat(price)))
 
@@ -960,7 +1004,7 @@ async def on_reaction_add(reaction, member):
 
             if resultMsg != '':
                 await message.remove_reaction(emoji, member)
-                await member.channel.send(resultMsg)
+                await message.channel.send(resultMsg)
                 return
 
             result = isWinner(userId, botBank.balances, 0.5)
@@ -1062,6 +1106,7 @@ def getFlipBoxEmbed(messageId, userId, name, amount, results):
     embed.add_field(name = name + '\'s Current Balance:', value= str(helper.moneyFormat(botBank.balances[str(userId)]['balance'])), inline = False)
     
     return embed
+
 
 #Start the bot
 bot.run(TOKEN)

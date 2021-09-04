@@ -4,50 +4,50 @@ import time
 import math
 
 goonsFile = 'goons.json'
-maxGoonLevel = 100
+maxGoonLevel = 45
 
 goonSetup = {
     1 : {
-        'costToBuy' : 1000,
-        'costPerLevel' : 125,
-        'costMultiplier' : 2.5,
-        'moneyPerHourPerLevel' : 20,
-        'moneyMultiplier' : 3.0
+        'costToBuy' : 3000,
+        'costPerLevel' : 400,
+        'costMultiplier' : 1.12,
+        'moneyPerHourPerLevel' : 40,
+        'moneyMultiplier' : 1.1
     },
     2 : {
-        'costToBuy' : 2500,
-        'costPerLevel' : 250,
-        'costMultiplier' : 2.4,
-        'moneyPerHourPerLevel' : 40,
-        'moneyMultiplier' : 3.3
+        'costToBuy' : 10000,
+        'costPerLevel' : 390,
+        'costMultiplier' : 1.14,
+        'moneyPerHourPerLevel' : 50,
+        'moneyMultiplier' : 1.12
     },
     3 : {
-        'costToBuy' : 6000,
-        'costPerLevel' : 500,
-        'costMultiplier' : 2.3,
-        'moneyPerHourPerLevel' : 75,
-        'moneyMultiplier' : 3.8
+        'costToBuy' : 25000,
+        'costPerLevel' : 380,
+        'costMultiplier' : 1.16,
+        'moneyPerHourPerLevel' : 60,
+        'moneyMultiplier' : 1.14
     },
     4 : {
-        'costToBuy' : 15000,
-        'costPerLevel' : 750,
-        'costMultiplier' : 2.2,
-        'moneyPerHourPerLevel' : 120,
-        'moneyMultiplier' : 4.5
+        'costToBuy' : 75000,
+        'costPerLevel' : 370,
+        'costMultiplier' : 1.18,
+        'moneyPerHourPerLevel' : 70,
+        'moneyMultiplier' : 1.16
     },
     5 : {
-        'costToBuy' : 40000,
-        'costPerLevel' : 1000,
-        'costMultiplier' : 2.1,
-        'moneyPerHourPerLevel' : 150,
-        'moneyMultiplier' : 5.5
+        'costToBuy' : 150000,
+        'costPerLevel' : 360,
+        'costMultiplier' : 1.2,
+        'moneyPerHourPerLevel' : 80,
+        'moneyMultiplier' : 1.18
     },
     6 : {
-        'costToBuy' : 100000,
-        'costPerLevel' : 1250,
-        'costMultiplier' : 2.0,
-        'moneyPerHourPerLevel' : 240,
-        'moneyMultiplier' : 6.8
+        'costToBuy' : 400000,
+        'costPerLevel' : 350,
+        'costMultiplier' : 1.22,
+        'moneyPerHourPerLevel' : 90,
+        'moneyMultiplier' : 1.2
     }
 }
 
@@ -80,22 +80,28 @@ class Goons:
 
 
     #Gets the levels of all owned goons
-    def getGoonLevelStats(self, player):
+    def getGoonStats(self, player):
         goons = self.getGoonLevels(player)
-        output = ''
+        outCurrent = []
+        outNext = []
+        outCost = []
         totalPerHour = 0
 
         for i in goons:
-            currentPerHour = round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * goons[i])
-            nextPerHour = round(goonSetup[i]['moneyPerHourPerLevel'] * goonSetup[i]['moneyMultiplier'] * (goons[i]+1))
-            totalPerHour += currentPerHour
+            currentPerHour = round(goonSetup[i]['moneyPerHourPerLevel'] * (goonSetup[i]['moneyMultiplier'] ** goons[i]))
+            nextPerHour = round(goonSetup[i]['moneyPerHourPerLevel'] * (goonSetup[i]['moneyMultiplier'] ** (goons[i]+1)))
+            upgradePrice = round(goonSetup[i]['costPerLevel'] * (goonSetup[i]['costMultiplier'] ** (goons[i]+1)))
 
-            output += '• Goon ' + str(i) + '   (CURRENT: Lvl. ' + str(goons[i]) + '  |  ' + helper.moneyFormat(str(currentPerHour)) + '/h)'
-            output += '   (NEXT: ' + helper.moneyFormat(str(nextPerHour)) + '/h)\n'
+            if goons[i] == 0:
+                outCurrent.append(helper.getNumberEmojiFromInt(i) + ' **' + str(goons[i]) + '**')
+            else:
+                outCurrent.append(helper.getNumberEmojiFromInt(i) + ' **' + str(goons[i]) + '** - ' + helper.moneyFormat(str(currentPerHour)) + '/h')
+                totalPerHour += currentPerHour
+                
+            outNext.append(helper.moneyFormat(str(nextPerHour)) + '/h')
+            outCost.append(helper.moneyFormat(str(upgradePrice)))
 
-        output += '\nTOTAL PER HOUR: ' + helper.moneyFormat(str(totalPerHour))
-
-        return output
+        return outCurrent, outNext, outCost, helper.moneyFormat(str(totalPerHour))
 
 
     #Returns the time in seconds since Goon earnings have been claimed
@@ -128,7 +134,7 @@ class Goons:
         totalAmount = 0
 
         for goon in goons:
-            cashPerHour = goonSetup[goon]['moneyPerHourPerLevel'] * goonSetup[goon]['moneyMultiplier'] * goons[goon]
+            cashPerHour = goonSetup[goon]['moneyPerHourPerLevel'] * (goonSetup[goon]['moneyMultiplier'] ** goons[goon])
             cashPerSecond = cashPerHour / 3600
             totalCashFromGoon = math.floor(timeSinceClaimed * cashPerSecond)
 
@@ -173,7 +179,7 @@ class Goons:
         if currentGoonLevel == maxGoonLevel:
             return -1
 
-        return round(goonSetup[goon]['costPerLevel'] * (goonSetup[goon]['costMultiplier'] * (currentGoonLevel + 1)))
+        return round(goonSetup[goon]['costPerLevel'] * (goonSetup[goon]['costMultiplier'] ** (currentGoonLevel + 1)))
 
 
     #Increments the level of a specific goon

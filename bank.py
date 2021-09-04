@@ -5,34 +5,39 @@ balanceFile = 'balances.json'
 loanAmount = 100
 
 statSetupInfo = {
-    'balance' : { 'display' : 'Current Balance', 'startAmount' : 100 },
-    'totalWon' : { 'display' : 'Total Money Won', 'startAmount' : 0 },
-    'totalLost' : { 'display' : 'Total Money Lost', 'startAmount' : 0 },
-    'loans' : { 'display' : 'Loans Given', 'startAmount' : 0 },
-    'resets' : { 'display' : 'Times Balance Hit ZERO', 'startAmount' : 0 },
-    'flipWins' : { 'display' : 'Coin Flip Wins', 'startAmount' : 0 },
-    'flipLosses' : { 'display' : 'Coin Flip Losses', 'startAmount' : 0 },
-    'rollWins' : { 'display' : 'Dice Roll Wins', 'startAmount' : 0 },
-    'rollLosses' : { 'display' : 'Dice Roll Losses', 'startAmount' : 0 },
-    'suitWins' : { 'display' : 'Suit Wins', 'startAmount' : 0 },
-    'suitLosses' : { 'display' : 'Suit Losses', 'startAmount' : 0 },
-    'xyzWins' : { 'display' : 'XYZ Wins', 'startAmount' : 0 },
-    'xyzLosses' : { 'display' : 'XYZ Losses', 'startAmount' : 0 },
-    'fiftyWins' : { 'display' : '50/50 Wins', 'startAmount' : 0 },
-    'fiftyLosses' : { 'display' : '50/50 Losses', 'startAmount' : 0 },
-    'trinkets' : { 'display' : 'Trinkets', 'startAmount' : 0 },
-    'goon1' : { 'display' : 'Goon 1 Level', 'startAmount' : 0 },
-    'goon2' : { 'display' : 'Goon 2 Level', 'startAmount' : 0 },
-    'goon3' : { 'display' : 'Goon 3 Level', 'startAmount' : 0 },
-    'goon4' : { 'display' : 'Goon 4 Level', 'startAmount' : 0 },
-    'goon5' : { 'display' : 'Goon 5 Level', 'startAmount' : 0 },
-    'goon6' : { 'display' : 'Goon 6 Level', 'startAmount' : 0 }
+    'balance' : { 'display' : 'Balance', 'startAmount' : 100, 'toMoney' : True },
+    'totalWon' : { 'display' : 'Money Won', 'startAmount' : 0, 'toMoney' : True },
+    'totalLost' : { 'display' : 'Money Lost', 'startAmount' : 0, 'toMoney' : True },
+    'totalClaimed' : { 'display' : 'Money Claimed', 'startAmount' : 0, 'toMoney' : True },
+    'totalUpgrades' : { 'display' : 'Spent on Upgrades', 'startAmount' : 0, 'toMoney' : True },
+    'totalTrinkets' : { 'display' : 'Spent on Trinkets', 'startAmount' : 0, 'toMoney' : True },
+    'loans' : { 'display' : 'Loans Given', 'startAmount' : 0, 'toMoney' : False },
+    'resets' : { 'display' : 'Balance Hit 0', 'startAmount' : 0, 'toMoney' : False },
+    'flipWins' : { 'display' : 'Flip Wins', 'startAmount' : 0, 'toMoney' : False },
+    'flipLosses' : { 'display' : 'Flip Losses', 'startAmount' : 0, 'toMoney' : False },
+    'rollWins' : { 'display' : 'Roll Wins', 'startAmount' : 0, 'toMoney' : False },
+    'rollLosses' : { 'display' : 'Roll Losses', 'startAmount' : 0, 'toMoney' : False },
+    #'suitWins' : { 'display' : 'Suit Wins', 'startAmount' : 0, 'toMoney' : False },
+    #'suitLosses' : { 'display' : 'Suit Losses', 'startAmount' : 0, 'toMoney' : False },
+    'xyzWins' : { 'display' : 'XYZ Wins', 'startAmount' : 0, 'toMoney' : False },
+    'xyzLosses' : { 'display' : 'XYZ Losses', 'startAmount' : 0, 'toMoney' : False },
+    'fiftyWins' : { 'display' : '50/50 Wins', 'startAmount' : 0, 'toMoney' : False },
+    'fiftyLosses' : { 'display' : '50/50 Losses', 'startAmount' : 0, 'toMoney' : False },
+    'trinkets' : { 'display' : 'Trinkets', 'startAmount' : 0, 'toMoney' : False },
+    'goon1' : { 'display' : 'Goon 1 Lvl', 'startAmount' : 0, 'toMoney' : False },
+    'goon2' : { 'display' : 'Goon 2 Lvl', 'startAmount' : 0, 'toMoney' : False },
+    'goon3' : { 'display' : 'Goon 3 Lvl', 'startAmount' : 0, 'toMoney' : False },
+    'goon4' : { 'display' : 'Goon 4 Lvl', 'startAmount' : 0, 'toMoney' : False },
+    'goon5' : { 'display' : 'Goon 5 Lvl', 'startAmount' : 0, 'toMoney' : False },
+    'goon6' : { 'display' : 'Goon 6 Lvl', 'startAmount' : 0, 'toMoney' : False }
 }
 
 
 class Bank:   
     def __init__(self):
         self.flipBoxMessages = []
+        self.streakBonus = [] #Holds Tuples (userId, totalStreakBonus, -1=lose streak|1=win streak, streakCount)
+        self.streakBonusPerWinLoss = 0.05
         self.balances = self.loadBankBalances(balanceFile)
         self.addNewKeys()
 
@@ -124,21 +129,28 @@ class Bank:
 
 
     #Creates a string with all of the player stats in it
-    def getPlayerStats(self, userId, name):
+    def getPlayerStats(self, userId):
         id = str(userId)
         self.createNewUserStats(id)
 
-        output = helper.listHeaders('STATS FOR ' + name)
+        displayList = []
+        valueList = []
 
         for key in statSetupInfo.keys():
-            output += '• ' + statSetupInfo[key]['display'] + ': ' + str(self.balances[id][key]) + '\n'
+            displayList.append(statSetupInfo[key]['display'])
 
-        return output
+            if statSetupInfo[key]['toMoney']:
+                valueList.append('**' + helper.moneyFormat(str(int(self.balances[id][key]))) + '**')
+            else:
+                valueList.append('**' + str(self.balances[id][key]) + '**')
+
+        return displayList, valueList
 
 
     #Creates a string with all of the stats of the channel
     def getGlobalStats(self):
-        output = helper.listHeaders('GLOBAL STATS')
+        displayList = []
+        valueList = []
 
         for stat in statSetupInfo.keys():
             totalStat = 0
@@ -146,9 +158,14 @@ class Bank:
             for user in self.balances.keys():
                 totalStat += self.balances[user][stat]
 
-            output += '• ' + statSetupInfo[stat]['display'] + ': ' + str(totalStat) + '\n'
+            displayList.append(statSetupInfo[stat]['display'])
 
-        return output
+            if statSetupInfo[stat]['toMoney']:
+                valueList.append('**' + helper.moneyFormat(str(int(totalStat))) + '**')
+            else:
+                valueList.append('**' + str(totalStat) + '**')
+
+        return displayList, valueList
 
 
     #Creates a string with all of the stats of the channel
@@ -197,8 +214,37 @@ class Bank:
     def addFlipBoxResult(self, messageId, result):
         for i in range(0, len(self.flipBoxMessages)):
             if self.flipBoxMessages[i][0] == messageId:
+                if len(self.flipBoxMessages[i][4]) > 12:
+                    self.flipBoxMessages[i][4].clear()
+
                 if result < 0:
                     self.flipBoxMessages[i][4].append(':red_circle:')
                 else:
                     self.flipBoxMessages[i][4].append(':green_circle:')
                 return
+
+
+    def getStreakBonus(self, userId):
+        for i in range(0, len(self.streakBonus)):
+            if userId == self.streakBonus[i][0]:
+                return self.streakBonus[i][1], self.streakBonus[i][2]
+        return -1,-1
+
+
+    def startStreakBonus(self, userId, outcome):
+        element = [userId, 0.0, outcome, 1]
+        self.streakBonus.append(element)
+
+    
+    def increaseStreakBonus(self, userId):
+        for i in range(0, len(self.streakBonus)):
+            if userId == self.streakBonus[i][0]:
+                self.streakBonus[i][3] += 1
+                if self.streakBonus[i][3] >= 2:
+                    self.streakBonus[i][1] += self.streakBonusPerWinLoss
+
+    
+    def resetStreakBonus(self, userId):
+        for i in range(0, len(self.streakBonus)):
+            if userId == self.streakBonus[i][0]:
+                self.streakBonus.pop(i)
