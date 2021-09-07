@@ -37,7 +37,7 @@ class Bank:
     def __init__(self):
         self.flipBoxMessages = []
         self.streakBonus = [] #Holds Tuples (userId, totalStreakBonus, -1=lose streak|1=win streak, streakCount)
-        self.streakBonusPerWinLoss = 0.05
+        self.streakBonusPerWinLoss = 0.09
         self.balances = self.loadBankBalances(balanceFile)
         self.addNewKeys()
 
@@ -236,12 +236,15 @@ class Bank:
         self.streakBonus.append(element)
 
     
-    def increaseStreakBonus(self, userId):
+    def increaseStreakBonus(self, userId, outcome):
         for i in range(0, len(self.streakBonus)):
             if userId == self.streakBonus[i][0]:
                 self.streakBonus[i][3] += 1
                 if self.streakBonus[i][3] >= 2:
-                    self.streakBonus[i][1] += self.streakBonusPerWinLoss
+                    self.streakBonus[i][1] += (self.streakBonusPerWinLoss * outcome)
+                    print(self.streakBonus[i][1])
+                    if self.streakBonus[i][1] >= abs(0.37):
+                        self.resetStreakBonus(userId)
 
     
     def resetStreakBonus(self, userId):

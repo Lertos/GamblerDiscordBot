@@ -35,6 +35,9 @@ rollPayoutRate = 5
 suitPayoutRate = 3
 xyzPayoutRate = 2
 
+#Role Category
+roleCategory = 'Game Chats'
+
 
 #================
 #   ON READY
@@ -207,8 +210,10 @@ async def flipCoin(ctx, guess : str, amount : int):
 
     #If they do have a streak and the result was the same as the streak outcome, increase it
     else:
-        if (streakType < 0 and payout < 0) or (streakType > 0 and payout > 0):
-            botBank.increaseStreakBonus(userId)
+        if (streakType < 0 and payout < 0):
+            botBank.increaseStreakBonus(userId, 1)
+        elif (streakType > 0 and payout > 0):
+            botBank.increaseStreakBonus(userId, -1)
         else:
             botBank.resetStreakBonus(userId)
 
@@ -1076,7 +1081,7 @@ def getGameEmbed():
 
 
 
-@bot.command(name='flipBox', aliases=['fb'], help='s', ignore_extra=True) 
+@bot.command(name='flipBox', aliases=['fb'], help='[amount] Creates a box to gamble with', ignore_extra=True) 
 async def createFlipBox(ctx, amount : int):
     userId = ctx.author.id
     name = str(ctx.author.display_name)
@@ -1095,6 +1100,29 @@ async def createFlipBox(ctx, amount : int):
     await message.add_reaction(emoji = '🇹')
 
     botBank.addFlipBoxMessage(message.id, userId, name, amount)
+
+
+@bot.command(name='test', help='test', ignore_extra=True) 
+async def testStuff(ctx, channelName : str):
+    guild = ctx.author.guild
+    categories = guild.categories
+    found = False
+
+    for i in categories:
+        if i.name.lower() == roleCategory.lower():
+            categoryChannel = i
+            found = True
+
+    if found == False:
+        await ctx.channel.send('The "' + roleCategory + '" doesnt exist - command failed')
+        return
+
+    for i in categoryChannel.text_channels:
+        if i.name.lower() == channelName.lower():
+            await ctx.channel.send('The "' + roleCategory + '" doesnt exist - command failed')
+            return
+
+    await categoryChannel.create_text_channel(channelName)
 
 
 def getFlipBoxEmbed(messageId, userId, name, amount, results):
