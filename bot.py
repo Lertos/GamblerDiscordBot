@@ -946,10 +946,53 @@ async def showGameEmbed(ctx):
 @bot.command(name='gameAdd', help='[emoji] [game name] [slots] Adds the given emoji/game line',  hidden=True, ignore_extra=True) 
 @commands.has_permissions(administrator=True)
 async def addGameToGameEmbed(ctx, emoji : str, gameName : str, slots : int):
+    guild = ctx.author.guild
     messageId = botGameEmbed.getGameMessageId()
 
     #Delete the command message
     await ctx.message.delete()
+
+    #Create the role for the game
+    roles = guild.roles
+    exists = False
+
+    for i in roles:
+        if i.name.lower() == gameName.lower():
+            exists = True
+            break
+
+    #If the role exists - cancel the add since the permissions will be all screwed up if it's been created before
+    if exists == True:
+        await ctx.channel.send('The role "' + gameName + '" already exists. Delete it and try again')
+        return
+
+    #Create the role and save it for the channel creation later
+    newRole = await ctx.author.guild.create_role(name=gameName)
+
+    #Get the channel categories of the guild
+    categories = guild.categories
+    found = False
+
+    #Check if there is a category created for game chats specifically
+    for i in categories:
+        if i.name.lower() == roleCategory.lower():
+            categoryChannel = i
+            found = True
+
+    if found == False:
+        await ctx.channel.send('The "' + roleCategory + '" category doesnt exist. Create it and try again')
+        return
+
+    #Check if the text channel already exists - if it does cancel as the role needs to be created alongside the text channel
+    for i in categoryChannel.text_channels:
+        if i.name.lower() == gameName.lower():
+            #Delete the role to avoid orphan roles
+            await newRole.delete()
+            await ctx.channel.send('The "' + gameName + '" text channel already exists - command failed')
+            return
+
+    #Create the text channel and make it so it can only be seen by those with the role as well
+    await categoryChannel.create_text_channel(name=gameName, overwrites={guild.default_role: discord.PermissionOverwrite(read_messages=False), newRole : discord.PermissionOverwrite(read_messages=True)})
 
     #Add the game to the list
     botGameEmbed.addGame(gameName, emoji, slots)
@@ -959,11 +1002,13 @@ async def addGameToGameEmbed(ctx, emoji : str, gameName : str, slots : int):
         message = await ctx.channel.fetch_message(messageId)
         await message.edit(embed = getGameEmbed())
         await message.add_reaction(emoji = emoji)
+    
 
 
 @bot.command(name='gameRemove', help='[game name] Removes the Adds the given emoji/game line', hidden=True, ignore_extra=True) 
 @commands.has_permissions(administrator=True)
 async def removeGameFromGameEmbed(ctx, gameName : str):
+    guild = ctx.author.guild
     messageId = botGameEmbed.getGameMessageId()
 
     #Delete the command message
@@ -971,6 +1016,31 @@ async def removeGameFromGameEmbed(ctx, gameName : str):
 
     #Get the emoji used by the game
     emoji = botGameEmbed.getEmojiGivenName(gameName)
+
+    #Delete the role for the game
+    roles = guild.roles
+
+    for i in roles:
+        if i.name.lower() == gameName.lower():
+            await i.delete()
+
+    #Get the channel categories of the guild
+    categories = guild.categories
+
+    #Check if there is a category created for game chats specifically
+    for i in categories:
+        if i.name.lower() == roleCategory.lower():
+            categoryChannel = i
+            found = True
+
+    if found == False:
+        await ctx.channel.send('The "' + roleCategory + '" category doesnt exist. Create it and try again')
+        return
+
+    #Delete the text channel
+    for i in categoryChannel.text_channels:
+        if i.name.lower() == gameName.lower().replace(' ','-'):
+            await i.delete()
 
     #Remove the game from the list
     botGameEmbed.removeGameByName(gameName)
@@ -1041,11 +1111,17 @@ async def on_reaction_add(reaction, member):
     displayName = str(member.display_name)
 
     botGameEmbed.addPlayerToGame(emoji, userId, displayName)
+    
+    #Get the game name and find which role to add the player to
+    gameName = botGameEmbed.getGameNameByEmojiName(emoji)
+    roles = member.guild.roles
+
+    #Add the role if exists
+    for role in roles:
+        if role.name.lower() == gameName.lower():
+            await member.add_roles(role)
 
     await message.edit(embed = getGameEmbed())
-
-    #How to remove a reaction completely from a message
-    #await message.remove_reaction(emoji, member)
 
 
 @bot.event
@@ -1068,6 +1144,15 @@ async def on_reaction_remove(reaction, member):
     botGameEmbed.removePlayerFromGame(emoji, userId)
 
     await message.edit(embed = getGameEmbed())
+
+    #Get the game name and find which role to add the player to
+    gameName = botGameEmbed.getGameNameByEmojiName(emoji)
+    roles = member.guild.roles
+
+    #Add the role if exists
+    for role in roles:
+        if role.name.lower() == gameName.lower():
+            await member.remove_roles(role)
 
     #Remove the players reaction from the message
     await message.remove_reaction(emoji, member)
@@ -1102,27 +1187,74 @@ async def createFlipBox(ctx, amount : int):
     botBank.addFlipBoxMessage(message.id, userId, name, amount)
 
 
-@bot.command(name='test', help='test', ignore_extra=True) 
-async def testStuff(ctx, channelName : str):
-    guild = ctx.author.guild
-    categories = guild.categories
-    found = False
+@bot.command(name='gameRemoveMember', aliases=['grm'], help='[game]', hidden=True, ignore_extra=True) 
+async def gameRemoveMember(ctx, gameName : str, displayName : str):
+    userId = await getIdFromDisplayName(ctx, displayName)
+    
+    #Delete the command message
+    await ctx.message.delete()
 
-    for i in categories:
-        if i.name.lower() == roleCategory.lower():
-            categoryChannel = i
-            found = True
-
-    if found == False:
-        await ctx.channel.send('The "' + roleCategory + '" doesnt exist - command failed')
+    if userId == -1:
+        await ctx.author.send('No one in the discord has a display name that matches what you supplied to the add command')
         return
 
-    for i in categoryChannel.text_channels:
-        if i.name.lower() == channelName.lower():
-            await ctx.channel.send('The "' + roleCategory + '" doesnt exist - command failed')
-            return
+    emoji = botGameEmbed.getEmojiGivenName(gameName)
 
-    await categoryChannel.create_text_channel(channelName)
+    if emoji == -1:
+        await ctx.author.send('That game does not exist in the game list')
+        return
+
+    botGameEmbed.removePlayerFromGame(emoji, userId)
+    
+    member = ctx.guild.get_member(userId)
+    roles = member.guild.roles
+
+    #Remove the role if the user has it
+    for role in roles:
+        if role.name.lower() == gameName.lower():
+            await member.remove_roles(role)
+
+    messageId = botGameEmbed.getGameMessageId()
+    
+    if messageId != -1:
+        message = await ctx.channel.fetch_message(messageId)
+        await message.edit(embed = getGameEmbed())
+        await message.remove_reaction(emoji, member)
+
+
+@bot.command(name='gameAddMember', aliases=['gam'], help='[game]', hidden=True, ignore_extra=True) 
+async def gameAddMember(ctx, gameName : str, displayName : str):
+    userId = await getIdFromDisplayName(ctx, displayName)
+
+    #Delete the command message
+    await ctx.message.delete()
+
+    if userId == -1:
+        await ctx.author.send('No one in the discord has a display name that matches what you supplied to the add command')
+        return
+
+    emoji = botGameEmbed.getEmojiGivenName(gameName)
+
+    if emoji == -1:
+        await ctx.author.send('That game does not exist in the game list')
+        return
+
+    botGameEmbed.addPlayerToGame(emoji, userId, displayName)
+    
+    member = ctx.guild.get_member(userId)
+    roles = member.guild.roles
+
+    #Add the game role
+    for role in roles:
+        if role.name.lower() == gameName.lower():
+            await member.add_roles(role)
+
+    messageId = botGameEmbed.getGameMessageId()
+    
+    if messageId != -1:
+        message = await ctx.channel.fetch_message(messageId)
+        await message.edit(embed = getGameEmbed())
+        await message.add_reaction(emoji, member)
 
 
 def getFlipBoxEmbed(messageId, userId, name, amount, results):
@@ -1134,6 +1266,38 @@ def getFlipBoxEmbed(messageId, userId, name, amount, results):
     embed.add_field(name = name + '\'s Current Balance:', value= str(helper.moneyFormat(botBank.balances[str(userId)]['balance'])), inline = False)
     
     return embed
+
+
+@bot.command(name='schedule', help='Creates a schedule with times for a weekend', hidden=True, ignore_extra=True) 
+async def schedule(ctx):
+    emojis = ['🌆','🏙️','🌇','🌃']
+
+    #Delete the command message
+    await ctx.message.delete()
+
+    embed = discord.Embed()
+    embed.add_field(name = 'FRIDAY TIME SLOTS', value= ":city_sunset: : 5PM - 8PM\n:night_with_stars: : 8PM - 12AM", inline = False)
+    
+    message = await ctx.channel.send(embed = embed)
+
+    for emoji in emojis[2:]:
+        await message.add_reaction(emoji)
+
+    embed = discord.Embed()
+    embed.add_field(name = 'SATURDAY TIME SLOTS', value= ":city_dusk: : 9AM - 12PM\n:cityscape: : 12PM - 5PM\n:city_sunset: : 5PM - 8PM\n:night_with_stars: : 8PM - 12AM", inline = False)
+    
+    message = await ctx.channel.send(embed = embed)
+
+    for emoji in emojis[:]:
+        await message.add_reaction(emoji)
+
+    embed = discord.Embed()
+    embed.add_field(name = 'SUNDAY TIME SLOTS', value= ":city_dusk: : 9AM - 12PM\n:cityscape: : 12PM - 5PM\n:city_sunset: : 5PM - 8PM\n:night_with_stars: : 8PM - 12AM", inline = False)
+    
+    message = await ctx.channel.send(embed = embed)
+
+    for emoji in emojis[:]:
+        await message.add_reaction(emoji)
 
 
 #Start the bot

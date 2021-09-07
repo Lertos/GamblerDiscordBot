@@ -126,6 +126,15 @@ class GameEmbed:
         return -1
 
 
+    #Returns the game name given an emoji
+    def getGameNameByEmojiName(self, emoji):
+        for i in range(0, len(self.addedGames)):
+            if self.addedGames[i][1] == emoji:
+                return self.addedGames[i][0]
+        #No game was found with the given emoji
+        return -1
+
+
     #Adds a player to the list of members for a game, given an emoji
     def addPlayerToGame(self, emoji, userId, displayName):
         index = self.getIndexByEmojiName(emoji)
