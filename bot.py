@@ -1005,9 +1005,9 @@ async def addGameToGameEmbed(ctx, emoji : str, gameName : str, slots : int):
     
 
 
-@bot.command(name='gameRemove', help='[game name] Removes the Adds the given emoji/game line', hidden=True, ignore_extra=True) 
+@bot.command(name='gameRemove', help='[game name] [0=Dont Delete Role/TextChannel,1=Delete Them] Removes the Adds the given emoji/game line', hidden=True, ignore_extra=True) 
 @commands.has_permissions(administrator=True)
-async def removeGameFromGameEmbed(ctx, gameName : str):
+async def removeGameFromGameEmbed(ctx, gameName : str, deleteRoleAndChannel : int):
     guild = ctx.author.guild
     messageId = botGameEmbed.getGameMessageId()
 
@@ -1018,29 +1018,30 @@ async def removeGameFromGameEmbed(ctx, gameName : str):
     emoji = botGameEmbed.getEmojiGivenName(gameName)
 
     #Delete the role for the game
-    roles = guild.roles
+    if deleteRoleAndChannel == 1:
+        roles = guild.roles
 
-    for i in roles:
-        if i.name.lower() == gameName.lower():
-            await i.delete()
+        for i in roles:
+            if i.name.lower() == gameName.lower():
+                await i.delete()
 
-    #Get the channel categories of the guild
-    categories = guild.categories
+        #Get the channel categories of the guild
+        categories = guild.categories
 
-    #Check if there is a category created for game chats specifically
-    for i in categories:
-        if i.name.lower() == roleCategory.lower():
-            categoryChannel = i
-            found = True
+        #Check if there is a category created for game chats specifically
+        for i in categories:
+            if i.name.lower() == roleCategory.lower():
+                categoryChannel = i
+                found = True
 
-    if found == False:
-        await ctx.channel.send('The "' + roleCategory + '" category doesnt exist. Create it and try again')
-        return
+        if found == False:
+            await ctx.channel.send('The "' + roleCategory + '" category doesnt exist. Create it and try again')
+            return
 
-    #Delete the text channel
-    for i in categoryChannel.text_channels:
-        if i.name.lower() == gameName.lower().replace(' ','-'):
-            await i.delete()
+        #Delete the text channel
+        for i in categoryChannel.text_channels:
+            if i.name.lower() == gameName.lower().replace(' ','-'):
+                await i.delete()
 
     #Remove the game from the list
     botGameEmbed.removeGameByName(gameName)
